@@ -9,28 +9,73 @@
     Semestar:       Zimski (V)
     
     Ime fajla:      client.c
-    Opis:           Registar automobila TCP/IP
+    Opis:           Registar Automobila TCP/IP
     
     Platforma:      Raspberry Pi 2 - Model B
     OS:             Raspbian
     ********************************************************************
 */
 
-#include<stdio.h>      //printf
-#include<string.h>     //strlen
-#include<sys/socket.h> //socket
-#include<arpa/inet.h>  //inet_addr
-#include <fcntl.h>     //for open
-#include <unistd.h>    //for close
+#include <stdio.h>      //printf
+#include <string.h>     //strlen
+#include <sys/socket.h> //socket
+#include <arpa/inet.h>  //inet_addr
+#include <fcntl.h>      //for open
+#include <unistd.h>     //for close
+#include <stdlib.h>     //malloc
+#include <string.h>     //strcmp
 
-#define DEFAULT_BUFLEN 512
+#define DEFAULT_BUFLEN 1024
 #define DEFAULT_PORT   27015
+
+typedef struct {
+    const char* name;   // Ime komande
+    const char* description; //Opis komande
+} Command;
+
+const Command commands[] = {
+    {"Login", "Prijava/Registracija korisnika"},
+    {"Logout", "Odjava korisnika"},
+    {"Search", "Pretraga dostupnih automobila u elektronskom registru"},
+    {"SearchAll", "Pretraga svih automobila u elektronskom registru"},
+    {"Search[id:ID][manufacturer:MANUFACTURER][carname:CARNAME][year:YEAR]", "Pretraga za zadate kriterijume (sve ili pojedinacno navedene)"},
+    {"CheckStatus", "Provera rezervisanih automobila prijavljenog korisnika"},
+    {"Reserve[id:ID]", "Rezervacija automobila od strane prijavljenog korisnika po ID-u automobila"}
+};
+
+void display_menu(const Command* commands, size_t command_counter)
+{
+    puts("\n\t\t\t******************************************");
+    puts("");
+    puts("\t\t\tDobrodosli na stranicu Registar Automobila");
+    puts("");
+    puts("\t\t\t******************************************\n\n\n");
+    puts("Dostupne komande:\n");
+    for(size_t i = 0; i < command_counter; i++)
+    {
+        printf("\t - %s: %s\n", commands[i].name, commands[i].description);
+    }
+    printf("\n\n");
+}
+
+void execute_command(const char* command, const Command* commands, size_t command_count)
+{
+    for(size_t i = 0; i < command_count; i++)
+    {
+        if(strcmp(commands[i].name, command) == 0)
+        {
+            printf("Izvrsavanje komande: %s\n", commands[i].name);
+            return;
+        }
+    }
+}
 
 int main(int argc , char *argv[])
 {
     int sock;
     struct sockaddr_in server;
-    char *message = "this is a test";
+    
+    size_t command_count = sizeof(commands) / sizeof(commands[0]);
 
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -53,18 +98,38 @@ int main(int argc , char *argv[])
 
     puts("Connected\n");
 
-    //Send some data
-    if( send(sock , message , strlen(message), 0) < 0)
+    char* message = (char*) malloc(DEFAULT_BUFLEN * sizeof(char));
+    if(message == NULL)
     {
-        puts("Send failed");
-        return 1;
+        printf("Memory not allocated.\n");
+        exit(0);
     }
 
-    puts("Client message:");
-    puts(message);
+    while(1)
+    {
+        display_menu(commands, command_count);
+        printf("Unesite komandu: ");
+        if(fgets(message, DEFAULT_BUFLEN, stdin))
+            message[strcspn(message, "\n")] = '\0'; // uklanja novi red koji fgets unese  
+        else
+        {
+            printf("Greska tokom citanja ulaza\n");
+            continue;
+        }
 
+        execute_command(message, commands, command_count);
+
+        //Send some data
+        if( send(sock , message , strlen(message), 0) < 0)
+        {
+            puts("Send failed");
+            return 1;
+        }
+        printf("\nKomanda je uspesno poslata serveru.\n\n\n");
+    }
+    free(message);
     close(sock);
-
+    
     return 0;
 }
 
