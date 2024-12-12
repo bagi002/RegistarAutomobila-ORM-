@@ -73,6 +73,7 @@ void execute_command(const char* command, const Command* commands, size_t comman
 int main(int argc , char *argv[])
 {
     int sock;
+    int read_size;
     struct sockaddr_in server;
     
     size_t command_count = sizeof(commands) / sizeof(commands[0]);
@@ -105,6 +106,13 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
+    char* message_from_server = (char*) malloc(DEFAULT_BUFLEN * sizeof(char));
+    if(message_from_server == NULL)
+    {
+        printf("Memory not allocated.\n");
+        exit(0);
+    }
+
     while(1)
     {
         display_menu(commands, command_count);
@@ -119,14 +127,50 @@ int main(int argc , char *argv[])
 
         execute_command(message, commands, command_count);
 
-        //Send some data
+        //Slanje komande serveru
         if( send(sock , message , strlen(message), 0) < 0)
         {
             puts("Send failed");
             return 1;
         }
         printf("\nKomanda je uspesno poslata serveru.\n\n\n");
+
+        //Prijem poruke od servera
+        if(read_size = recv(sock, message_from_server, DEFAULT_BUFLEN, 0) > 0)
+        {
+            //Slanje potvrde serveru da je porukla stigla do klijenta
+            if( send(sock , "PRIMLJENO" , strlen("PRIMLJENO"), 0) < 0)
+            {
+                puts("Send failed");
+                return 1;
+            }
+
+            printf("Primljena poruka od strane servera:\n");
+            printf("%s\n\n", message_from_server);
+            printf("Da li zelite da unesete drugu komandu? (Y/N)");
+            char ch = getchar();
+            while (getchar() != '\n'); // Čisti ulazni bafer
+            if(ch == 'Y' || ch == 'y')
+            {
+                free(message_from_server);
+                continue;
+            }
+            else
+            {
+                free(message_from_server);
+                break;
+            }
+        }
+        if(read_size == 0)
+        {
+            fflush(stdout);
+        }
+        else if(read_size == -1)
+        {
+            perror("recv failed");
+        }
     }
+    printf("Hvala Vam sto ste posetili nasu stranicu :)\n");
     free(message);
     close(sock);
     
