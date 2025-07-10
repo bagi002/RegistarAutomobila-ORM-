@@ -323,31 +323,14 @@ void *connection_handler(void *param)
                                         break;
                                     }
                                 } else {
-                                    // Check if user already has a reservation
-                                    int user_has_reservation = 0;
-                                    for (int i = 0; i < broj_vozila; i++) {
-                                        if (vozila[i].status == 0 && vozila[i].reserved_by_user_id == user_id) {
-                                            user_has_reservation = 1;
-                                            break;
-                                        }
-                                    }
+                                    // Reserve the vehicle
+                                    vozila[vehicle_index].status = 0; // Mark as reserved
+                                    vozila[vehicle_index].reserved_by_user_id = user_id;
                                     
-                                    if (user_has_reservation) {
-                                        // User already has a reservation
-                                        if(send_message(sock, "# RESERVE ERROR 303 #") < 0) {
-                                            printf("Thread %d: Send failed\n", thread_index);
-                                            break;
-                                        }
-                                    } else {
-                                        // Reserve the vehicle
-                                        vozila[vehicle_index].status = 0; // Mark as reserved
-                                        vozila[vehicle_index].reserved_by_user_id = user_id;
-                                        
-                                        // Send success response
-                                        if(send_message(sock, "# RESERVE SUCCES #") < 0) {
-                                            printf("Thread %d: Send failed\n", thread_index);
-                                            break;
-                                        }
+                                    // Send success response
+                                    if(send_message(sock, "# RESERVE SUCCES #") < 0) {
+                                        printf("Thread %d: Send failed\n", thread_index);
+                                        break;
                                     }
                                 }
                             }
