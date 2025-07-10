@@ -222,14 +222,140 @@ void *connection_handler(void *param)
                         continue;
                         
                     case CMD_CHECKSTATUS:
-                        printf("Thread %d: Processing checkstatus command\n", thread_index);
-                        snprintf(response, sizeof(response), "SERVER: Checkstatus command received");
-                        break;
+                        if (broj_rijeci < 2){
+                            if(send_message(sock, "# CHECKSTATUS ERROR #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                        }else{
+                            char *user_id_str = remove_brackets(komanda[1]);
+                            int user_id = atoi(user_id_str);
+                            
+                            // Check if user exists
+                            int user_found = 0;
+                            for (int i = 0; i < broj_korisnika; i++) {
+                                if (korisnici[i].id == user_id) {
+                                    user_found = 1;
+                                    break;
+                                }
+                            }
+                            
+                            if (user_found) {
+                                // Find all vehicles reserved by this user
+                                Vozilo reserved_vehicles[100];
+                                int reserved_count = 0;
+                                
+                                for (int i = 0; i < broj_vozila; i++) {
+                                    if (vozila[i].status == 0 && vozila[i].reserved_by_user_id == user_id) {
+                                        reserved_vehicles[reserved_count] = vozila[i];
+                                        reserved_count++;
+                                    }
+                                }
+                                
+                                // Send success response first
+                                if(send_message(sock, "# CHECKSTATUS SUCCES #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                                
+                                // Then send the table data with reserved vehicles
+                                send_tabela(sock, reserved_vehicles, reserved_count);
+                            } else {
+                                if(send_message(sock, "# CHECKSTATUS ERROR #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            }
+                            
+                            free(user_id_str);
+                        }
+                        continue;
                         
                     case CMD_RESERVE:
-                        printf("Thread %d: Processing reserve command\n", thread_index);
-                        snprintf(response, sizeof(response), "SERVER: Reserve command received");
-                        break;
+                        if (broj_rijeci < 3){
+                            if(send_message(sock, "# RESERVE ERROR 304 #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                        }else{
+                            char *user_id_str = remove_brackets(komanda[1]);
+                            char *car_id_str = remove_brackets(komanda[2]);
+                            int user_id = atoi(user_id_str);
+                            int car_id = atoi(car_id_str);
+                            
+                            // Check if user exists
+                            int user_found = 0;
+                            for (int i = 0; i < broj_korisnika; i++) {
+                                if (korisnici[i].id == user_id) {
+                                    user_found = 1;
+                                    break;
+                                }
+                            }
+                            
+                            if (!user_found) {
+                                if(send_message(sock, "# RESERVE ERROR 305 #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            } else {
+                                // Find the vehicle
+                                int vehicle_found = 0;
+                                int vehicle_index = -1;
+                                
+                                for (int i = 0; i < broj_vozila; i++) {
+                                    if (vozila[i].id == car_id) {
+                                        vehicle_found = 1;
+                                        vehicle_index = i;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!vehicle_found) {
+                                    // Vehicle doesn't exist
+                                    if(send_message(sock, "# RESERVE ERROR 301 #") < 0) {
+                                        printf("Thread %d: Send failed\n", thread_index);
+                                        break;
+                                    }
+                                } else if (vozila[vehicle_index].status == 0) {
+                                    // Vehicle is already reserved
+                                    if(send_message(sock, "# RESERVE ERROR 302 #") < 0) {
+                                        printf("Thread %d: Send failed\n", thread_index);
+                                        break;
+                                    }
+                                } else {
+                                    // Check if user already has a reservation
+                                    int user_has_reservation = 0;
+                                    for (int i = 0; i < broj_vozila; i++) {
+                                        if (vozila[i].status == 0 && vozila[i].reserved_by_user_id == user_id) {
+                                            user_has_reservation = 1;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (user_has_reservation) {
+                                        // User already has a reservation
+                                        if(send_message(sock, "# RESERVE ERROR 303 #") < 0) {
+                                            printf("Thread %d: Send failed\n", thread_index);
+                                            break;
+                                        }
+                                    } else {
+                                        // Reserve the vehicle
+                                        vozila[vehicle_index].status = 0; // Mark as reserved
+                                        vozila[vehicle_index].reserved_by_user_id = user_id;
+                                        
+                                        // Send success response
+                                        if(send_message(sock, "# RESERVE SUCCES #") < 0) {
+                                            printf("Thread %d: Send failed\n", thread_index);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            free(user_id_str);
+                            free(car_id_str);
+                        }
+                        continue;
                         
                     case CMD_UNKNOWN:
                     default:
