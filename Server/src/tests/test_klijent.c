@@ -6,7 +6,7 @@
 #include<stdlib.h>
 #include<pthread.h>
 
-#define DEFAULT_BUFLEN 1024
+#define DEFAULT_BUFLEN 8192
 #define DEFAULT_PORT 27015
 
 // Global variables for thread communication
@@ -39,6 +39,101 @@ int receive_message(int sock, char *buffer, int buffer_size) {
 }
 
 /**
+ * Function to parse and display TABELA data in tabular format
+ * @param message - the TABELA message from server
+ */
+void display_tabela(const char* message) {
+    printf("\n==================================================================================\n");
+    printf("| %-3s | %-12s | %-12s | %-4s | %-8s | %-8s | %-10s |\n", 
+           "ID", "Proizvodjac", "Naziv", "God.", "Boja", "Tablice", "Status");
+    printf("==================================================================================\n");
+    
+    if (!message) {
+        printf("Error: No message to parse\n");
+        printf("==================================================================================\n\n");
+        return;
+    }
+    
+    // Simple approach: directly parse the known format
+    // Format: # TABELA [15] {[1] [Toyota] [Camry] [2020] [Crna] [BG001AA] [Dostupno]} ...
+    
+    const char* count_start = strstr(message, "[");
+    if (!count_start) {
+        printf("Greska: Nije pronadjen broj elemenata.\n");
+        printf("==================================================================================\n\n");
+        return;
+    }
+    
+    count_start++; // Skip the '['
+    const char* count_end = strstr(count_start, "]");
+    if (!count_end) {
+        printf("Greska: Neispravan format broja elemenata.\n");
+        printf("==================================================================================\n\n");
+        return;
+    }
+    
+    // Extract count
+    char count_str[10];
+    int count_len = count_end - count_start;
+    if (count_len > 0 && count_len < 9) {
+        strncpy(count_str, count_start, count_len);
+        count_str[count_len] = '\0';
+        int num_elements = atoi(count_str);
+        
+        printf("Broj pronadjenih vozila: %d\n", num_elements);
+        
+        if (num_elements > 0) {
+            // Find and parse each vehicle entry
+            const char* search_pos = message;
+            int parsed_count = 0;
+            
+            while (parsed_count < num_elements && (search_pos = strstr(search_pos, "{")) != NULL) {
+                search_pos++; // Skip the '{'
+                const char* end_brace = strstr(search_pos, "}");
+                
+                if (end_brace) {
+                    // Extract the vehicle data
+                    int length = end_brace - search_pos;
+                    if (length > 0 && length < 500) {
+                        char vehicle_data[512];
+                        strncpy(vehicle_data, search_pos, length);
+                        vehicle_data[length] = '\0';
+                        
+                        // Parse individual vehicle data
+                        char id[20] = "", manufacturer[50] = "", name[50] = "", year[20] = "", 
+                             color[30] = "", plates[30] = "", status[30] = "";
+                        
+                        int fields_parsed = sscanf(vehicle_data, 
+                            "[%19[^]]] [%49[^]]] [%49[^]]] [%19[^]]] [%29[^]]] [%29[^]]] [%29[^]]]", 
+                            id, manufacturer, name, year, color, plates, status);
+                        
+                        if (fields_parsed == 7) {
+                            printf("| %-3s | %-12s | %-12s | %-4s | %-8s | %-8s | %-10s |\n", 
+                                   id, manufacturer, name, year, color, plates, status);
+                            parsed_count++;
+                        }
+                    }
+                    
+                    search_pos = end_brace + 1;
+                } else {
+                    break;
+                }
+            }
+            
+            if (parsed_count == 0) {
+                printf("Greska pri parsiranju podataka vozila.\n");
+            }
+        } else {
+            printf("Nema vozila koja zadovoljavaju kriterije pretrage.\n");
+        }
+    } else {
+        printf("Greska: Neispravan format broja elemenata.\n");
+    }
+    
+    printf("==================================================================================\n\n");
+}
+
+/**
  * Thread function to continuously receive messages from server
  * @param param - socket descriptor as void pointer
  * @return NULL when thread terminates
@@ -54,7 +149,28 @@ void *receive_thread(void *param) {
         reply_size = receive_message(sock, server_reply, sizeof(server_reply));
         
         if(reply_size > 0) {
-            printf("\n[SERVER RESPONSE]: %s\n", server_reply);
+            // Check if this message contains TABELA data
+            if (strstr(server_reply, "# TABELA") != NULL) {
+                // Extract and display the TABELA part
+                char* tabela_start = strstr(server_reply, "# TABELA");
+                display_tabela(tabela_start);
+                
+                // Also show any other response parts before TABELA
+                char before_tabela[DEFAULT_BUFLEN];
+                char* tabela_pos = strstr(server_reply, "# TABELA");
+                if (tabela_pos) {
+                    int before_len = tabela_pos - server_reply;
+                    if (before_len > 0 && before_len < DEFAULT_BUFLEN - 1) {
+                        strncpy(before_tabela, server_reply, before_len);
+                        before_tabela[before_len] = '\0';
+                        if (strlen(before_tabela) > 0) {
+                            printf("\n[SERVER RESPONSE]: %s\n", before_tabela);
+                        }
+                    }
+                }
+            } else {
+                printf("\n[SERVER RESPONSE]: %s\n", server_reply);
+            }
             printf("Enter command: ");
             fflush(stdout); // Force output to appear immediately
         }

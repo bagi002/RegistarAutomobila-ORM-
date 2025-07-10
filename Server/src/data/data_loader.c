@@ -59,11 +59,10 @@ int load_korisnici_from_file(const char* filepath, Korisnik* korisnici_array, in
     return count;
 }
 
-// Function to load vehicles from vozila.txt file
-int load_vozila_from_file(const char* filepath, Vozilo* vozila_array, int max_count) {
-    FILE* file = fopen(filepath, "r");
-    if (file == NULL) {
-        printf("Warning: Could not open %s. Starting with empty vehicle array.\n", filepath);
+int load_vozila_from_file(const char* filename, Vozilo* vozila, int max_count) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Error: Cannot open file %s\n", filename);
         return 0;
     }
     
@@ -71,46 +70,35 @@ int load_vozila_from_file(const char* filepath, Vozilo* vozila_array, int max_co
     char line[512];
     
     while (fgets(line, sizeof(line), file) && count < max_count) {
-        // Parse line format: id,manufacturer,carname,year,color,status,reserved_by_user_id
-        char* token = strtok(line, ",");
-        if (token == NULL) continue;
+        // Remove newline character
+        line[strcspn(line, "\n")] = 0;
         
-        vozila_array[count].id = atoi(token);
+        // Parse CSV line: id,manufacturer,carname,year,color,tablice,status,reserved_by_user_id
+        char* id_str = strtok(line, ",");
+        char* manufacturer = strtok(NULL, ",");
+        char* carname = strtok(NULL, ",");
+        char* year_str = strtok(NULL, ",");
+        char* color = strtok(NULL, ",");
+        char* tablice = strtok(NULL, ",");
+        char* status_str = strtok(NULL, ",");
+        char* reserved_by_str = strtok(NULL, ",");
         
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        strncpy(vozila_array[count].manufacturer, token, 99);
-        vozila_array[count].manufacturer[99] = '\0';
-        
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        strncpy(vozila_array[count].carname, token, 99);
-        vozila_array[count].carname[99] = '\0';
-        
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        vozila_array[count].year = atoi(token);
-        
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        strncpy(vozila_array[count].color, token, 49);
-        vozila_array[count].color[49] = '\0';
-        
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        vozila_array[count].status = atoi(token);
-        
-        token = strtok(NULL, ",\n");
-        if (token != NULL) {
-            vozila_array[count].reserved_by_user_id = atoi(token);
+        if (id_str && manufacturer && carname && year_str && color && tablice && status_str && reserved_by_str) {
+            int id = atoi(id_str);
+            int year = atoi(year_str);
+            int status = atoi(status_str);
+            int reserved_by = atoi(reserved_by_str);
+            
+            init_vozilo(&vozila[count], id, manufacturer, carname, year, color, tablice);
+            vozila[count].status = status;
+            vozila[count].reserved_by_user_id = reserved_by;
+            count++;
         } else {
-            vozila_array[count].reserved_by_user_id = -1;
+            printf("Warning: Invalid line format in %s: %s\n", filename, line);
         }
-        
-        count++;
     }
     
     fclose(file);
-    printf("Loaded %d vehicles from %s\n", count, filepath);
+    printf("Loaded %d vehicles from %s\n", count, filename);
     return count;
 }

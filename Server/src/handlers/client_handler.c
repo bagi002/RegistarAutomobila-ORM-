@@ -152,14 +152,74 @@ void *connection_handler(void *param)
                         continue;
                         
                     case CMD_LOGOUT:
-                        printf("Thread %d: Processing logout command\n", thread_index);
-                        snprintf(response, sizeof(response), "SERVER: Logout command received");
-                        break;
+                        if (broj_rijeci < 2){
+                            if(send_message(sock, "# LOGOUT ERROR #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                        }else{
+                            char *user_id_str = remove_brackets(komanda[1]);
+                            int user_id = atoi(user_id_str);
+                            
+                            // Check if user exists
+                            int user_found = 0;
+                            for (int i = 0; i < broj_korisnika; i++) {
+                                if (korisnici[i].id == user_id) {
+                                    user_found = 1;
+                                    break;
+                                }
+                            }
+                            
+                            if (user_found) {
+                                if(send_message(sock, "# LOGOUT SUCCES #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            } else {
+                                if(send_message(sock, "# LOGOUT ERROR #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            }
+                            
+                            free(user_id_str);
+                        }
+                        continue;
                         
                     case CMD_SEARCH:
-                        printf("Thread %d: Processing search command\n", thread_index);
-                        snprintf(response, sizeof(response), "SERVER: Search command received");
-                        break;
+                        if (broj_rijeci < 5) {
+                            if(send_message(sock, "# SEARCH ERROR #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                        } else {
+                            char *id_filter = remove_brackets(komanda[1]);
+                            char *manufacturer_filter = remove_brackets(komanda[2]);
+                            char *carname_filter = remove_brackets(komanda[3]);
+                            char *year_filter = remove_brackets(komanda[4]);
+                            
+                            // Perform search
+                            Vozilo results[100];
+                            int result_count = search_vozila(vozila, broj_vozila, 
+                                                           id_filter, manufacturer_filter, 
+                                                           carname_filter, year_filter,
+                                                           results, 100);
+                            
+                            // Send success response first
+                            if(send_message(sock, "# SEARCH SUCCES #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                            
+                            // Then send the table data
+                            send_tabela(sock, results, result_count);
+                            
+                            free(id_filter);
+                            free(manufacturer_filter);
+                            free(carname_filter);
+                            free(year_filter);
+                        }
+                        continue;
                         
                     case CMD_CHECKSTATUS:
                         printf("Thread %d: Processing checkstatus command\n", thread_index);
