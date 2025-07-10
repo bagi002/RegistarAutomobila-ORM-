@@ -86,8 +86,8 @@ void *connection_handler(void *param)
                             
                             if (result == 0) {
                                 char success_msg[DEFAULT_BUFLEN];
-                                snprintf(success_msg, sizeof(success_msg), "# LOGIN SUCCES %d [%s] [%s] [%s] #", 
-                                    found_user->id, found_user->firstname, found_user->lastname, found_user->email);
+                                snprintf(success_msg, sizeof(success_msg), "# LOGIN SUCCES %d [%s] [%s] #", 
+                                    found_user->id, found_user->firstname, found_user->lastname);
                                 if(send_message(sock, success_msg) < 0) {
                                     printf("Thread %d: Send failed\n", thread_index);
                                     break;
@@ -110,9 +110,46 @@ void *connection_handler(void *param)
                         continue;
                         
                     case CMD_REGISTRATION:
-                        printf("Thread %d: Processing registration command\n", thread_index);
-                        snprintf(response, sizeof(response), "SERVER: Registration command received");
-                        break;
+                        if (broj_rijeci < 5){
+                            if(send_message(sock, "# REGISTRATION ERROR 203 #") < 0) {
+                                printf("Thread %d: Send failed\n", thread_index);
+                                break;
+                            }
+                        }else{
+                            char *firstname = remove_brackets(komanda[1]);
+                            char *lastname = remove_brackets(komanda[2]);
+                            char *username = remove_brackets(komanda[3]);
+                            char *password = remove_brackets(komanda[4]);
+
+                            int new_user_id;
+                            int result = register_korisnik(firstname, lastname, username, password, 
+                                                         korisnici, &broj_korisnika, 100, &new_user_id);
+                            
+                            if (result == 0) {
+                                char success_msg[DEFAULT_BUFLEN];
+                                snprintf(success_msg, sizeof(success_msg), "# REGISTRATION SUCCES %d #", new_user_id);
+                                if(send_message(sock, success_msg) < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            } else if (result == 201) {
+                                if(send_message(sock, "# REGISTRATION ERROR 201 #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            } else if (result == 202) {
+                                if(send_message(sock, "# REGISTRATION ERROR 202 #") < 0) {
+                                    printf("Thread %d: Send failed\n", thread_index);
+                                    break;
+                                }
+                            }
+                            
+                            free(firstname);
+                            free(lastname);
+                            free(username);
+                            free(password);
+                        }
+                        continue;
                         
                     case CMD_LOGOUT:
                         printf("Thread %d: Processing logout command\n", thread_index);

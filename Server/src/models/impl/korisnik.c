@@ -3,7 +3,7 @@
 #include <time.h>
 #include <stdio.h>
 
-void init_korisnik(Korisnik* korisnik, int id, const char* username, const char* password, const char* firstname, const char* lastname, const char* email) {
+void init_korisnik(Korisnik* korisnik, int id, const char* username, const char* password, const char* firstname, const char* lastname) {
     korisnik->id = id;
     strncpy(korisnik->username, username, 49);
     korisnik->username[49] = '\0';
@@ -13,8 +13,6 @@ void init_korisnik(Korisnik* korisnik, int id, const char* username, const char*
     korisnik->firstname[49] = '\0';
     strncpy(korisnik->lastname, lastname, 49);
     korisnik->lastname[49] = '\0';
-    strncpy(korisnik->email, email, 99);
-    korisnik->email[99] = '\0';
 
     korisnik->status = 1; // aktivan
     korisnik->reserved_count = 0;
@@ -69,6 +67,55 @@ int find_korisnik(const char* username, const char* password, Korisnik* korisnic
     
     // User not found in database
     return 102;
+}
+
+// Function to check if username already exists
+// Returns: 1 - username exists, 0 - username doesn't exist
+int username_exists(const char* username, Korisnik* korisnici_array, int korisnici_count) {
+    for (int i = 0; i < korisnici_count; i++) {
+        if (strcmp(korisnici_array[i].username, username) == 0) {
+            return 1; // Username exists
+        }
+    }
+    return 0; // Username doesn't exist
+}
+
+// Function to register a new user
+// Returns: 0 - success (user registered)
+//          201 - user already exists
+//          202 - username already taken
+int register_korisnik(const char* firstname, const char* lastname, const char* username, 
+                     const char* password, Korisnik* korisnici_array, int* korisnici_count, 
+                     int max_count, int* new_user_id) {
+    
+    // Check if we have space for new user
+    if (*korisnici_count >= max_count) {
+        return 201; // Database full
+    }
+    
+    // Check if username already exists
+    if (username_exists(username, korisnici_array, *korisnici_count)) {
+        return 202; // Username already taken
+    }
+    
+    // Generate new user ID (highest existing ID + 1)
+    int new_id = 1;
+    for (int i = 0; i < *korisnici_count; i++) {
+        if (korisnici_array[i].id >= new_id) {
+            new_id = korisnici_array[i].id + 1;
+        }
+    }
+    
+    // Initialize the new user
+    init_korisnik(&korisnici_array[*korisnici_count], new_id, username, password, firstname, lastname);
+    
+    // Set the new user ID for return
+    *new_user_id = new_id;
+    
+    // Increment user count
+    (*korisnici_count)++;
+    
+    return 0; // Success
 }
 
 

@@ -15,7 +15,7 @@ int load_korisnici_from_file(const char* filepath, Korisnik* korisnici_array, in
     char line[512];
     
     while (fgets(line, sizeof(line), file) && count < max_count) {
-        // Parse line format: id,username,password,firstname,lastname,email,status
+        // Parse line format: id,username,password,firstname,lastname,status
         char* token = strtok(line, ",");
         if (token == NULL) continue;
         
@@ -40,11 +40,6 @@ int load_korisnici_from_file(const char* filepath, Korisnik* korisnici_array, in
         if (token == NULL) continue;
         strncpy(korisnici_array[count].lastname, token, 49);
         korisnici_array[count].lastname[49] = '\0';
-        
-        token = strtok(NULL, ",");
-        if (token == NULL) continue;
-        strncpy(korisnici_array[count].email, token, 99);
-        korisnici_array[count].email[99] = '\0';
         
         token = strtok(NULL, ",\n");
         if (token == NULL) continue;
