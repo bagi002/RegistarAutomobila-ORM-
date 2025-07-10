@@ -90,7 +90,7 @@ Sintaksa komande # KOMANDA ATRBUTI #
     od klijenta:
         # LOGIN [user_name] [password] #
     od servera:
-        # LOGIN SUCCES {PODACI KORISNIKA} #
+        # LOGIN SUCCES ID [name] [surname] [email] #
         # LOGIN ERROR CODE_ERROR #
     kodovi greske:
         101 - Pogresna lozinka

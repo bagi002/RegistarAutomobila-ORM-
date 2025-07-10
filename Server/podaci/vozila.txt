@@ -1,0 +1,15 @@
+1,Volkswagen,Golf,2020,Blue,1,-1
+2,BMW,320d,2019,Black,1,-1
+3,Audi,A4,2021,White,1,-1
+4,Mercedes,C-Class,2018,Silver,1,-1
+5,Toyota,Corolla,2020,Red,1,-1
+6,Ford,Focus,2019,Green,1,-1
+7,Opel,Astra,2017,Gray,1,-1
+8,Peugeot,308,2020,Blue,1,-1
+9,Renault,Megane,2018,Black,1,-1
+10,Skoda,Octavia,2021,White,1,-1
+11,Hyundai,i30,2019,Red,1,-1
+12,Kia,Ceed,2020,Silver,1,-1
+13,Mazda,3,2018,Blue,1,-1
+14,Honda,Civic,2019,Black,1,-1
+15,Nissan,Qashqai,2020,Gray,1,-1

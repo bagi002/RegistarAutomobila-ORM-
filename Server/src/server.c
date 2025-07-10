@@ -6,153 +6,20 @@
 #include<pthread.h>
 #include<stdlib.h>    //malloc, free
 
+#include "models/vozilo.h"
+#include "models/korisnik.h"
+#include "data/data_loader.h"
+#include "network/network_utils.h"
+#include "commands/command_parser.h"
+#include "handlers/client_handler.h"
+
 #define DEFAULT_BUFLEN 1024
 #define DEFAULT_PORT   27015
 
-// Global array to track thread status (0 = free, 1 = busy)
-int thread_status[10] = {0};
-pthread_mutex_t status_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// funkcija za primanje poruke od klijenta
-int receive_message(int sock, char *buffer, int buffer_size) {
-    int read_size = recv(sock, buffer, buffer_size - 1, 0);
-    if (read_size > 0) {
-        buffer[read_size] = '\0'; // Null terminate the message
-    }
-    return read_size;
-}
-
-// Funkcija za slanje poruke klijentu
-int send_message(int sock, const char *message) {
-    return send(sock, message, strlen(message), 0);
-}
-
-// Funkcija preuzima komandu u formatu: # word word ... word #
-// i vraca niz riječi u komanda[1000][256]
-int process_command(char *client_message, char komanda[1000][256], int thread_index) {
-    int broj_rijeci = 0;
-    
-    int len = strlen(client_message);
-    if(len >= 3 && client_message[0] == '#' && client_message[len-1] == '#') {
-        printf("Thread %d: Processing command format\n", thread_index);
-        
-        char temp_message[DEFAULT_BUFLEN];
-        strcpy(temp_message, client_message);
-        
-        temp_message[len-1] = '\0';
-        char *content = temp_message + 1;
-        
-        char *token = strtok(content, " \t\n");
-        while(token != NULL && broj_rijeci < 1000) {
-            strncpy(komanda[broj_rijeci], token, 255);
-            komanda[broj_rijeci][255] = '\0';
-            broj_rijeci++;
-            token = strtok(NULL, " \t\n");
-        }
-        
-        printf("Thread %d: Parsed %d words: ", thread_index, broj_rijeci);
-        for(int i = 0; i < broj_rijeci; i++) {
-            printf("'%s' ", komanda[i]);
-        }
-        printf("\n");
-        
-        return broj_rijeci;
-        
-    } else {
-        printf("Thread %d: Invalid command format. Expected: # word word ... word #\n", thread_index);
-        return -1;
-    }
-}
-
-// FUnkcija za obradu komunikacije sa klijentom
-void *connection_handler(void *param)
-{
-    // Get thread index and socket from parameter
-    int *params = (int*)param;
-    int thread_index = params[0];
-    int sock = params[1];
-    
-    // Detach the thread so it cleans up automatically
-    pthread_detach(pthread_self());
-    
-    int read_size;
-    char client_message[DEFAULT_BUFLEN];
-
-    printf("Thread %d started for client\n", thread_index);
-
-    // Main message receiving loop
-    while((read_size = receive_message(sock, client_message, DEFAULT_BUFLEN)) > 0)
-    {
-        printf("Thread %d received: %s\n", thread_index, client_message);
-        
-        // Check if client wants to exit
-        if(strcmp(client_message, "exit") == 0) {
-            printf("Thread %d: Client requested exit\n", thread_index);
-            // Send confirmation message before closing
-            send_message(sock, "SERVER: Goodbye!");
-            break;
-        }
-        
-        // Parse command using the separate function
-        char komanda[1000][256];  // Array to store parsed words
-        int broj_rijeci = process_command(client_message, komanda, thread_index);
-        
-        if(broj_rijeci < 0) {
-            // Invalid command format
-            char error_response[DEFAULT_BUFLEN];
-            strcpy(error_response, "SERVER: Invalid format. Use: # command word ... #");
-            if(send_message(sock, error_response) < 0) {
-                printf("Thread %d: Send failed\n", thread_index);
-                break;
-            }
-        } else {
-            // TODO: Process the parsed command here
-        
-            
-            // Send response with parsed information
-            char response[DEFAULT_BUFLEN];
-            snprintf(response, sizeof(response), "SERVER: Parsed %d words from command", broj_rijeci);
-            if(send_message(sock, response) < 0) {
-                printf("Thread %d: Send failed\n", thread_index);
-                break;
-            }
-            printf("Thread %d: Sent confirmation for command with %d words\n", thread_index, broj_rijeci);
-        }
-        
- 
-
-        
-        
-        // Clear the buffer for next message
-        memset(client_message, 0, sizeof(client_message));
-    }
-
-    // Handle disconnection cases
-    if(read_size == 0)
-    {
-        printf("Client disconnected from thread %d\n", thread_index);
-        fflush(stdout);
-    }
-    else if(read_size == -1)
-    {
-        printf("Thread %d: recv failed\n", thread_index);
-        perror("recv failed");
-    }
-
-    // Close socket
-    close(sock);
-    
-    // Mark thread as free
-    pthread_mutex_lock(&status_mutex);
-    thread_status[thread_index] = 0;
-    printf("Thread %d marked as free\n", thread_index);
-    pthread_mutex_unlock(&status_mutex);
-    
-    // Free the parameter array
-    free(param);
-    
-    return NULL;
-}
+Korisnik korisnici[100]; // Array to store users
+Vozilo vozila[100]; // Array to store vehicles
+int broj_korisnika = 0; // Track actual number of users loaded
+int broj_vozila = 0; // Track actual number of vehicles loaded
 
 int main(int argc , char *argv[])
 {
@@ -160,6 +27,10 @@ int main(int argc , char *argv[])
     
     int socket_desc, new_socket, c;
     struct sockaddr_in server, client;
+
+    // Load data form txt files or initialize arrays
+    broj_korisnika = load_korisnici_from_file("../podaci/korisnici.txt", korisnici, 100);
+    broj_vozila = load_vozila_from_file("../podaci/vozila.txt", vozila, 100);
 
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_desc == -1)
