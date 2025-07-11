@@ -30,7 +30,7 @@
 #define DEFAULT_PORT   27015
 
 // Uncomment the line below to enable debug output
-// #define DEBUG
+#define DEBUG
 
 
 int main(int argc , char *argv[])
@@ -104,10 +104,21 @@ int main(int argc , char *argv[])
             if(strcmp(message, "1") == 0)
             {
                 display_login_form();
-                snprintf(message, DEFAULT_BUFLEN, "# LOGIN [%s] [%s] #", user.name, user.password);
+                char temp_name[256];
+                char temp_psw[256];
+                printf("Korisničko ime: ");
+                if(fgets(temp_name, sizeof(temp_name), stdin))
+                    temp_name[strcspn(temp_name, "\n")] = '\0';
+                printf("Lozinka: ");
+                if(fgets(temp_psw, sizeof(temp_psw), stdin))
+                    temp_psw[strcspn(temp_psw, "\n")] = '\0';
+                puts("\nPodaci su uspešno uneti!");
+                snprintf(message, DEFAULT_BUFLEN, "# LOGIN [%s] [%s] #", temp_name, temp_psw);
                 #ifdef DEBUG
-                    printf("# LOGIN [%s] [%s] #", user.name, user.password);
+                    printf("# LOGIN [%s] [%s] #", temp_name, temp_psw);
                 #endif
+                
+                
             }
             else if(strcmp(message, "2") == 0)
             {
@@ -139,11 +150,12 @@ int main(int argc , char *argv[])
             {
                 case 1:
                     // Logout
-                    snprintf(message, DEFAULT_BUFLEN, "Logout");
-#ifdef DEBUG
-                    printf("Odabrana komanda: Logout\n");
-#endif
-                    break;
+                    snprintf(message, DEFAULT_BUFLEN, "# LOGOUT [%d] #", user.id);
+                #ifdef DEBUG
+                    printf("# LOGOUT [%d] #", user.id);
+                #endif
+                break;
+                
                 case 2:
                     // Search
                     snprintf(message, DEFAULT_BUFLEN, "Search");
@@ -193,7 +205,7 @@ int main(int argc , char *argv[])
             puts("Send failed");
             return 1;
         }
-        printf("\nKomanda je uspesno poslata serveru.\n\n\n");
+        printf("\nKomanda %s je uspesno poslata serveru.\n\n\n", message);
 
         //Prijem poruke od servera
         if(read_size = recv(sock, message_from_server, DEFAULT_BUFLEN, 0) > 0)
@@ -202,6 +214,7 @@ int main(int argc , char *argv[])
                 printf("Primljena poruka od strane servera:\n");
                 printf("%s\n\n", message_from_server);
             #endif
+            
             if(strcmp(message_from_server, "# LOGIN ERROR 101 #") == 0)
             {
                 printf("GRESKA: Uneli ste pogresnu lozinku!\n\n");
@@ -214,6 +227,67 @@ int main(int argc , char *argv[])
             {
                 printf("Uspesno ste se prijavili!\n\n");
                 authenticated = 1;
+                
+                // Parsiranje poruke za izvlačenje ID-a, imena i prezimena
+                // Format: "# LOGIN SUCCES ID [ime] [prezime] #"
+                char temp_message[DEFAULT_BUFLEN];
+                strncpy(temp_message, message_from_server, DEFAULT_BUFLEN - 1);
+                temp_message[DEFAULT_BUFLEN - 1] = '\0';
+                
+                // Pronađi ID između "SUCCES" i prvi "["
+                char *id_start = strstr(temp_message, "SUCCES");
+                if(id_start != NULL) {
+                    id_start += 7; // Preskoči "SUCCES "
+                    char *id_end = strchr(id_start, '[');
+                    if(id_end != NULL) {
+                        *id_end = '\0'; // Privremeno završi string
+                        // Ukloni razmake
+                        while(*id_start == ' ') id_start++;
+                        id_end--;
+                        while(id_end > id_start && *id_end == ' ') {
+                            *id_end = '\0';
+                            id_end--;
+                        }
+                        user.id = atoi(id_start);
+                        
+                        #ifdef DEBUG
+                            printf("Korisnikov ID: %d\n", user.id);
+                        #endif
+                        
+                        // Vrati originalni string za dalje parsiranje
+                        strncpy(temp_message, message_from_server, DEFAULT_BUFLEN - 1);
+                        temp_message[DEFAULT_BUFLEN - 1] = '\0';
+                    }
+                }
+                
+                char *start = strchr(temp_message, '[');
+                if(start != NULL) {
+                    start++; // Preskoči '['
+                    char *end = strchr(start, ']');
+                    if(end != NULL) {
+                        *end = '\0'; // Završi prvi string
+                        strncpy(user.first_name, start, sizeof(user.first_name) - 1);
+                        user.first_name[sizeof(user.first_name) - 1] = '\0';
+                        
+                        // Traži drugu zagradu
+                        start = strchr(end + 1, '[');
+                        if(start != NULL) {
+                            start++; // Preskoči '['
+                            end = strchr(start, ']');
+                            if(end != NULL) {
+                                *end = '\0'; // Završi drugi string
+                                strncpy(user.last_name, start, sizeof(user.last_name) - 1);
+                                user.last_name[sizeof(user.last_name) - 1] = '\0';
+                            }
+                        }
+                    }
+                }
+                
+                #ifdef DEBUG
+                    printf("Korisnikovo ime: %s\n", user.first_name);
+                    printf("Korisnikovo prezime: %s\n", user.last_name);
+                #endif
+                
                 continue; // Prikaži glavni meni nakon uspešne prijave
             }
             else if(strcmp(message_from_server, "# REGISTRATION 201 #") == 0)
@@ -226,20 +300,55 @@ int main(int argc , char *argv[])
                 printf("GRESKA: Korisnicko ime je zauzeto!\n\n");
                 memset(&user, 0, sizeof(User));
             }
-            else if(strcmp(message_from_server, "# REGISTRATION SUCCES #") == 0)
+            else if(strncmp(message_from_server, "# REGISTRATION SUCCES", 21) == 0)
             {
                 printf("Uspesno ste se registrovali!\n\n");
                 authenticated = 1;
+                
+                // Parsiranje poruke za izvlačenje ID-a
+                // Format: "# REGISTRATION SUCCES ID #"
+                char temp_message[DEFAULT_BUFLEN];
+                strncpy(temp_message, message_from_server, DEFAULT_BUFLEN - 1);
+                temp_message[DEFAULT_BUFLEN - 1] = '\0';
+                
+                // Pronađi ID između "SUCCES" i "#"
+                char *start = strstr(temp_message, "SUCCES");
+                if(start != NULL) {
+                    start += 7; // Preskoči "SUCCES "
+                    char *end = strchr(start, '#');
+                    if(end != NULL) {
+                        *end = '\0'; // Završi string
+                        // Ukloni razmake
+                        while(*start == ' ') start++;
+                        end--;
+                        while(end > start && *end == ' ') {
+                            *end = '\0';
+                            end--;
+                        }
+                        user.id = atoi(start);
+                        
+                        #ifdef DEBUG
+                            printf("Korisnikov ID: %d\n", user.id);
+                        #endif
+                    }
+                }
+                
                 continue; // Prikaži glavni meni nakon uspešne registracije
             }
             else if(authenticated)
             {
                 printf("Odgovor servera:\n%s\n\n", message_from_server);
                 
-                if(strcmp(message_from_server, "# LOGOUT SUCCESS #") == 0)
+                if(strcmp(message_from_server, "# LOGOUT SUCCES #") == 0)
                 {
                     printf("Uspešno ste se odjavili!\n\n");
                     authenticated = 0;
+                    
+                    // Obriši podatke o korisniku
+                    memset(user.first_name, 0, sizeof(user.first_name));
+                    memset(user.last_name, 0, sizeof(user.last_name));
+                    //memset(user.name, 0, sizeof(user.name));
+                    
                     continue;
                 }
             }

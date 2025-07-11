@@ -79,18 +79,6 @@ void display_login_form()
     puts("║                                                                              ║");
     puts("╚══════════════════════════════════════════════════════════════════════════════╝");
     puts("");
-    
-    char temp_input[256];
-    
-    printf("Korisničko ime: ");
-    if(fgets(temp_input, sizeof(temp_input), stdin))
-        temp_input[strcspn(temp_input, "\n")] = '\0';
-    
-    printf("Lozinka: ");
-    if(fgets(temp_input, sizeof(temp_input), stdin))
-        temp_input[strcspn(temp_input, "\n")] = '\0';
-    
-    puts("\nPodaci su uspešno uneti!");
 }
 
 void display_registration_form(User* user)

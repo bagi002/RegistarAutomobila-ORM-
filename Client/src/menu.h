@@ -6,6 +6,7 @@ typedef struct {
     char last_name[20];
     char name[20];
     char password[20];
+    unsigned id;
 } User;
 
 void display_menu(const User* user);
