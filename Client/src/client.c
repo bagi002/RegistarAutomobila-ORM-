@@ -24,63 +24,13 @@
 #include <unistd.h>     //for close
 #include <stdlib.h>     //malloc
 #include <string.h>     //strcmp
+#include "menu.h"
 
 #define DEFAULT_BUFLEN 1024
 #define DEFAULT_PORT   27015
 
-typedef struct {
-    const char* name;   // Ime komande
-    const char* description; //Opis komande
-} Command;
-
-typedef struct {
-    char name[20];
-    char password[20];
-}User;
-
-const Command commands[] = {
-    {"Login", "Prijava/Registracija korisnika"},
-    {"Logout", "Odjava korisnika"},
-    {"Search", "Pretraga dostupnih automobila u elektronskom registru"},
-    {"SearchAll", "Pretraga svih automobila u elektronskom registru"},
-    {"Search[id:ID][manufacturer:MANUFACTURER][carname:CARNAME][year:YEAR]", "Pretraga za zadate kriterijume (sve ili pojedinacno navedene)"},
-    {"CheckStatus", "Provera rezervisanih automobila prijavljenog korisnika"},
-    {"Reserve[id:ID]", "Rezervacija automobila od strane prijavljenog korisnika po ID-u automobila"}
-};
-
-
-void display_menu(const Command* commands, size_t command_counter)
-{
-    puts("\n\t\t\t******************************************");
-    puts("");
-    puts("\t\t\tDobrodosli na stranicu Registar Automobila");
-    puts("");
-    puts("\t\t\t******************************************\n\n\n");
-    puts("Dostupne komande:\n");
-    for(size_t i = 0; i < command_counter; i++)
-    {
-        printf("\t - %s: %s\n", commands[i].name, commands[i].description);
-    }
-    puts("\t - Exit: Izlaz iz aplikacije");
-    printf("\n\n");
-}
-
-void display_auth_menu()
-{
-    puts("\n\t\t\t******************************************");
-    puts("");
-    puts("\t\t\tDobrodosli na stranicu Registar Automobila");
-    puts("");
-    puts("\t\t\t******************************************\n\n\n");
-    puts("Molimo vas da se prijavite ili registrujete:\n");
-    puts("Dostupne komande:\n");
-    puts("\t - Za prijavu korisnika:");
-    puts("\t   # LOGIN [user_name] [password] #");
-    puts("\t - Za registraciju novog korisnika:");
-    puts("\t   # REGISTRATION [name] [surname] [username] [password] #");
-    puts("\t - Exit: Izlaz iz aplikacije");
-    printf("\n\n");
-}
+// Uncomment the line below to enable debug output
+// #define DEBUG
 
 
 int main(int argc , char *argv[])
@@ -90,7 +40,9 @@ int main(int argc , char *argv[])
     struct sockaddr_in server;
     
     User user;
-    size_t command_count = sizeof(commands) / sizeof(commands[0]);
+    // Inicijalizacija strukture
+    memset(&user, 0, sizeof(User));
+    
     int authenticated = 0; // Flag za proveru da li je korisnik ulogovan
 
     //Create socket
@@ -105,7 +57,6 @@ int main(int argc , char *argv[])
     server.sin_family = AF_INET;
     server.sin_port = htons(DEFAULT_PORT);
 
-    //Connect to remote server
     if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
     {
         perror("connect failed. Error");
@@ -137,10 +88,9 @@ int main(int argc , char *argv[])
         }
         else
         {
-            display_menu(commands, command_count);
+            display_menu(&user);
         }
 
-        printf("Unesite komandu: ");
         if(fgets(message, DEFAULT_BUFLEN, stdin))
             message[strcspn(message, "\n")] = '\0'; // uklanja novi red koji fgets unese  
         else
@@ -149,21 +99,91 @@ int main(int argc , char *argv[])
             continue;
         }
 
-        // Provera da li korisnik zeli da izadje
-        if(strcmp(message, "Exit") == 0)
+        if(!authenticated)
         {
-            printf("Da li stvarno zelite da izadjete iz aplikacije? (Y/N): ");
-            char exit_choice = getchar();
-            while (getchar() != '\n'); // Čisti ulazni bafer
-            
-            if(exit_choice == 'Y' || exit_choice == 'y')
+            if(strcmp(message, "1") == 0)
             {
-                printf("Zatvaranje veze sa serverom...\n");
+                display_login_form();
+                snprintf(message, DEFAULT_BUFLEN, "# LOGIN [%s] [%s] #", user.name, user.password);
+                #ifdef DEBUG
+                    printf("# LOGIN [%s] [%s] #", user.name, user.password);
+                #endif
+            }
+            else if(strcmp(message, "2") == 0)
+            {
+                display_registration_form(&user);
+                snprintf(message, DEFAULT_BUFLEN, "# REGISTRATION [%s] [%s] [%s] [%s] #", 
+                         user.first_name, user.last_name, user.name, user.password);
+                #ifdef DEBUG
+                printf("# REGISTRATION [%s] [%s] [%s] [%s] #", 
+                       user.first_name, user.last_name, user.name, user.password);
+                #endif
+            }
+            else if(strcmp(message, "3") == 0)
+            {
+                printf("Zatvaranje aplikacije...\n");
                 break;
             }
             else
             {
+                printf("Nepoznata opcija. Molimo vas da unesete 1, 2 ili 3.\n");
                 continue;
+            }
+        }
+
+        // Ako je korisnik autentifikovan, obrađuj komande iz menija
+        else
+        {
+            int choice = atoi(message);
+            switch(choice)
+            {
+                case 1:
+                    // Logout
+                    snprintf(message, DEFAULT_BUFLEN, "Logout");
+#ifdef DEBUG
+                    printf("Odabrana komanda: Logout\n");
+#endif
+                    break;
+                case 2:
+                    // Search
+                    snprintf(message, DEFAULT_BUFLEN, "Search");
+#ifdef DEBUG
+                    printf("Odabrana komanda: Search\n");
+#endif
+                    break;
+                case 3:
+                    // SearchAll
+                    snprintf(message, DEFAULT_BUFLEN, "SearchAll");
+#ifdef DEBUG
+                    printf("Odabrana komanda: SearchAll\n");
+#endif
+                    break;
+                case 4:
+                    // CheckStatus
+                    snprintf(message, DEFAULT_BUFLEN, "CheckStatus");
+#ifdef DEBUG
+                    printf("Odabrana komanda: CheckStatus\n");
+#endif
+                    break;
+                case 5:
+                    // Reserve
+                    snprintf(message, DEFAULT_BUFLEN, "Reserve");
+#ifdef DEBUG
+                    printf("Odabrana komanda: Reserve\n");
+#endif
+                    break;
+                case 6:
+                    // Exit
+                    printf("Zatvaranje aplikacije...\n");
+                    break;
+                default:
+                    printf("Nepoznata opcija. Molimo vas da unesete broj između 1 i 6.\n");
+                    continue;
+            }
+            
+            if(choice == 6)
+            {
+                break;
             }
         }
 
@@ -178,17 +198,10 @@ int main(int argc , char *argv[])
         //Prijem poruke od servera
         if(read_size = recv(sock, message_from_server, DEFAULT_BUFLEN, 0) > 0)
         {
-            // //Slanje potvrde serveru da je porukla stigla do klijenta
-            // if( send(sock , "PRIMLJENO" , strlen("PRIMLJENO"), 0) < 0)
-            // {
-            //     puts("Send failed");
-            //     return 1;
-            // }
-
-            printf("Primljena poruka od strane servera:\n");
-            printf("%s\n\n", message_from_server);
-
-            // Handle specific LOGIN ERROR responses
+            #ifdef DEBUG
+                printf("Primljena poruka od strane servera:\n");
+                printf("%s\n\n", message_from_server);
+            #endif
             if(strcmp(message_from_server, "# LOGIN ERROR 101 #") == 0)
             {
                 printf("GRESKA: Uneli ste pogresnu lozinku!\n\n");
@@ -197,44 +210,38 @@ int main(int argc , char *argv[])
             {
                 printf("GRESKA: Uneli ste pogresno korisnicko ime!\n\n");
             }
-            else if(strncmp(message_from_server, "# LOGIN SUCCESS", 15) == 0)
+            else if(strncmp(message_from_server, "# LOGIN SUCCES", 14) == 0)
             {
                 printf("Uspesno ste se prijavili!\n\n");
                 authenticated = 1;
+                continue; // Prikaži glavni meni nakon uspešne prijave
             }
-            // Handle REGISTRATION ERROR responses
             else if(strcmp(message_from_server, "# REGISTRATION 201 #") == 0)
             {
                 printf("GRESKA: Korisnik vec postoji!\n\n");
+                memset(&user, 0, sizeof(User));
             }
             else if(strcmp(message_from_server, "# REGISTRATION 202 #") == 0)
             {
                 printf("GRESKA: Korisnicko ime je zauzeto!\n\n");
+                memset(&user, 0, sizeof(User));
             }
-            else if(strcmp(message_from_server, "# REGISTRATION SUCCESS #") == 0)
+            else if(strcmp(message_from_server, "# REGISTRATION SUCCES #") == 0)
             {
                 printf("Uspesno ste se registrovali!\n\n");
                 authenticated = 1;
+                continue; // Prikaži glavni meni nakon uspešne registracije
             }
-
-            if(authenticated)
+            else if(authenticated)
             {
-                printf("Da li zelite da unesete drugu komandu? (Y/N): ");
-            }
-            else
-            {
-                printf("Da li zelite da se prijavite/registrujete ponovo? (Y/N): ");
-            }
-            
-            char ch = getchar();
-            while (getchar() != '\n'); // Čisti ulazni bafer
-            if(ch == 'Y' || ch == 'y')
-            {
-                continue;
-            }
-            else
-            {
-                break;
+                printf("Odgovor servera:\n%s\n\n", message_from_server);
+                
+                if(strcmp(message_from_server, "# LOGOUT SUCCESS #") == 0)
+                {
+                    printf("Uspešno ste se odjavili!\n\n");
+                    authenticated = 0;
+                    continue;
+                }
             }
         }
         if(read_size == 0)
