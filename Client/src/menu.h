@@ -21,6 +21,18 @@ typedef struct {
     unsigned id;
 } User;
 
+typedef struct{
+    unsigned id;                    // ID vozila
+    char manufacturer[20];          // Proizvođač
+    char model[20];                 // Model
+    int manufacturer_year;          // Godina proizvodnje
+    char color[20];                 // Boja
+    char plates[20];                // Registarske tablice
+    unsigned status;                // Status (0 = dostupno, 1 = rezervisano)
+    unsigned reserved_by_user_id;   // ID korisnika koji je rezervisao (0 ako nije rezervisano)
+} Vehicle;
+
+
 void display_menu(const User* user);
 void display_auth_menu();
 void display_login_form();
