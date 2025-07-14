@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "parser.h"
 
 int create_socket_connection(void)
 {
@@ -112,7 +113,57 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
             snprintf(message, DEFAULT_BUFLEN, "# LOGOUT [%d] #", user->id);
             break;
         case 2: // Search
-            snprintf(message, DEFAULT_BUFLEN, "Search");
+            {
+                char search_id[20] = "null";
+                char search_manufacturer[20] = "null";
+                char search_model[20] = "null";
+                char search_year[20] = "null";
+                char input[256];
+                
+                printf("\n=== PRETRAGA VOZILA ===\n");
+                printf("Ostavite prazno za parametre koje ne želite da koristite\n\n");
+                
+                printf("ID vozila: ");
+                if (fgets(input, sizeof(input), stdin)) {
+                    input[strcspn(input, "\n")] = '\0';
+                    if (strlen(input) > 0) {
+                        strncpy(search_id, input, sizeof(search_id) - 1);
+                        search_id[sizeof(search_id) - 1] = '\0';
+                    }
+                }
+                
+                printf("Proizvođač: ");
+                if (fgets(input, sizeof(input), stdin)) {
+                    input[strcspn(input, "\n")] = '\0';
+                    if (strlen(input) > 0) {
+                        strncpy(search_manufacturer, input, sizeof(search_manufacturer) - 1);
+                        search_manufacturer[sizeof(search_manufacturer) - 1] = '\0';
+                    }
+                }
+                
+                printf("Model: ");
+                if (fgets(input, sizeof(input), stdin)) {
+                    input[strcspn(input, "\n")] = '\0';
+                    if (strlen(input) > 0) {
+                        strncpy(search_model, input, sizeof(search_model) - 1);
+                        search_model[sizeof(search_model) - 1] = '\0';
+                    }
+                }
+                
+                printf("Godina proizvodnje: ");
+                if (fgets(input, sizeof(input), stdin)) {
+                    input[strcspn(input, "\n")] = '\0';
+                    if (strlen(input) > 0) {
+                        strncpy(search_year, input, sizeof(search_year) - 1);
+                        search_year[sizeof(search_year) - 1] = '\0';
+                    }
+                }
+                
+                snprintf(message, DEFAULT_BUFLEN, "# SEARCH [%s] [%s] [%s] [%s] #", 
+                         search_id, search_manufacturer, search_model, search_year);
+                
+                printf("\nPretragа je pokrenuta...\n");
+            }
             break;
         case 3: // SearchAll
             snprintf(message, DEFAULT_BUFLEN, "SearchAll");
@@ -142,20 +193,7 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
     }
     printf("\nKomanda je uspešno poslata serveru.\n\n");
     
-    // Receive response from server
-    int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
-    if (read_size > 0) {
-        server_response[read_size] = '\0';
-        
-        if (strcmp(server_response, "# LOGOUT SUCCES #") == 0) {
-            printf("Uspešno ste se odjavili!\n\n");
-            return 0; // Return to authentication menu
-        }
-        
-        printf("Odgovor servera:\n%s\n\n", server_response);
-    }
-    
-    return 1; // Stay in main menu
+    return 1; // Continue to receive response
 }
 
 int process_server_response(char *server_response, User *user, int *authenticated)
@@ -175,13 +213,6 @@ int process_server_response(char *server_response, User *user, int *authenticate
         return 0;
     }
     
-    // Handle login success
-    if (strncmp(server_response, "# LOGIN SUCCES", 14) == 0) {
-        printf("Uspesno ste se prijavili!\n\n");
-        parse_login_success(server_response, user);
-        return 1;
-    }
-    
     // Handle registration errors
     if (strcmp(server_response, "# REGISTRATION 201 #") == 0) {
         printf("GRESKA: Korisnik vec postoji!\n\n");
@@ -194,6 +225,18 @@ int process_server_response(char *server_response, User *user, int *authenticate
         memset(user, 0, sizeof(User));
         return 0;
     }
+
+    // Handle logout response
+    if (strcmp(server_response, "# LOGOUT SUCCES #") == 0) {
+        printf("Uspešno ste se odjavili!\n\n");
+        return 0; // Return to authentication menu
+    }
+    // Handle login success
+    if (strncmp(server_response, "# LOGIN SUCCES", 14) == 0) {
+        printf("Uspesno ste se prijavili!\n\n");
+        parse_login_success(server_response, user);
+        return 1;
+    }
     
     // Handle registration success
     if (strncmp(server_response, "# REGISTRATION SUCCES", 21) == 0) {
@@ -201,98 +244,19 @@ int process_server_response(char *server_response, User *user, int *authenticate
         parse_registration_success(server_response, user);
         return 1;
     }
-    
-    return 0;
-}
-
-void parse_login_success(char *message, User *user)
-{
-    // Format: "# LOGIN SUCCES ID [ime] [prezime] #"
-    char temp_message[DEFAULT_BUFLEN];
-    strncpy(temp_message, message, DEFAULT_BUFLEN - 1);
-    temp_message[DEFAULT_BUFLEN - 1] = '\0';
-    
-    // Parse ID between "SUCCES" and first "["
-    char *id_start = strstr(temp_message, "SUCCES");
-    if (id_start != NULL) {
-        id_start += 7; // Skip "SUCCES "
-        char *id_end = strchr(id_start, '[');
-        if (id_end != NULL) {
-            *id_end = '\0';
-            // Remove spaces
-            while (*id_start == ' ') id_start++;
-            id_end--;
-            while (id_end > id_start && *id_end == ' ') {
-                *id_end = '\0';
-                id_end--;
-            }
-            user->id = atoi(id_start);
-            
-            // Restore original string for further parsing
-            strncpy(temp_message, message, DEFAULT_BUFLEN - 1);
-            temp_message[DEFAULT_BUFLEN - 1] = '\0';
-        }
+     // Handle search responses
+    if (strcmp(server_response, "# SEARCH SUCCES #") == 0) {
+        printf("Pretraga je uspešna! Čekanje podataka o vozilima...\n\n");
+        return 1; // Stay in main menu
     }
     
-    // Parse first and last name
-    char *start = strchr(temp_message, '[');
-    if (start != NULL) {
-        start++; // Skip '['
-        char *end = strchr(start, ']');
-        if (end != NULL) {
-            *end = '\0';
-            strncpy(user->first_name, start, sizeof(user->first_name) - 1);
-            user->first_name[sizeof(user->first_name) - 1] = '\0';
-            
-            // Find second bracket
-            start = strchr(end + 1, '[');
-            if (start != NULL) {
-                start++; // Skip '['
-                end = strchr(start, ']');
-                if (end != NULL) {
-                    *end = '\0';
-                    strncpy(user->last_name, start, sizeof(user->last_name) - 1);
-                    user->last_name[sizeof(user->last_name) - 1] = '\0';
-                }
-            }
-        }
+    if (strcmp(server_response, "# SEARCH ERROR #") == 0) {
+        printf("GREŠKA: Pretraga nije uspešna!\n\n");
+        return 1; // Stay in main menu
     }
-    
-    #ifdef DEBUG
-        printf("Korisnikov ID: %d\n", user->id);
-        printf("Korisnikovo ime: %s\n", user->first_name);
-        printf("Korisnikovo prezime: %s\n", user->last_name);
-    #endif
-}
-
-void parse_registration_success(char *message, User *user)
-{
-    // Format: "# REGISTRATION SUCCES ID #"
-    char temp_message[DEFAULT_BUFLEN];
-    strncpy(temp_message, message, DEFAULT_BUFLEN - 1);
-    temp_message[DEFAULT_BUFLEN - 1] = '\0';
-    
-    // Find ID between "SUCCES" and "#"
-    char *start = strstr(temp_message, "SUCCES");
-    if (start != NULL) {
-        start += 7; // Skip "SUCCES "
-        char *end = strchr(start, '#');
-        if (end != NULL) {
-            *end = '\0';
-            // Remove spaces
-            while (*start == ' ') start++;
-            end--;
-            while (end > start && *end == ' ') {
-                *end = '\0';
-                end--;
-            }
-            user->id = atoi(start);
-            
-            #ifdef DEBUG
-                printf("Korisnikov ID: %d\n", user->id);
-            #endif
-        }
-    }
+    // Handle other server responses
+    printf("Odgovor servera:\n%s\n\n", server_response);
+    return 1; // Stay in current menu
 }
 
 void cleanup_user_data(User *user)

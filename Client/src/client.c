@@ -66,10 +66,24 @@ int main(int argc, char *argv[])
         } else {
             result = handle_main_menu(sock, &user, message, server_response);
             if (result == -1) break; // Exit application
-            if (result == 0) {
-                authenticated = 0;
-                cleanup_user_data(&user);
-                continue;
+            
+            // Receive response from server after sending command
+            int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
+            if (read_size > 0) {
+                server_response[read_size] = '\0';
+                int process_result = process_server_response(server_response, &user, &authenticated);
+                
+                if (process_result == 0) {
+                    authenticated = 0;
+                    cleanup_user_data(&user);
+                    continue;
+                }
+            } else if (read_size == 0) {
+                printf("Server je zatvorio konekciju.\n");
+                break;
+            } else {
+                perror("recv failed");
+                break;
             }
         }
     }
