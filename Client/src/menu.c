@@ -121,7 +121,7 @@ void display_vehicles_table(Vehicle *vehicles, int count) {
     
     // Print table header
     printf("┌─────────┬─────────────┬─────────────┬──────────┬──────────┬──────────┬──────────┐\n");
-    printf("│ %-7s │ %-11s │ %-11s │ %-8s │ %-8s │ %-8s │ %-8s │\n", 
+    printf("│ %-7s │ %-11s  │ %-11s │ %-8s │ %-8s │ %-8s │ %-8s │\n", 
            "ID", "Proizvođač", "Model", "Godina", "Boja", "Tablica", "Status");
     printf("├─────────┼─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\n");
     

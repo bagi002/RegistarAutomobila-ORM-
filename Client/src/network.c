@@ -3,23 +3,27 @@
 
 
 // Function to handle user navigation after displaying vehicles
-void handle_vehicle_display_navigation() {
+int handle_vehicle_display_navigation() {
     char choice[10];
     
-    printf("\n=== OPCIJE ===\n");
-    printf("1. Povratak na glavni meni\n");
-    printf("2. Nova pretraga\n");
-    printf("Unesite opciju (1-2): ");
-    
-    if (fgets(choice, sizeof(choice), stdin)) {
-        choice[strcspn(choice, "\n")] = '\0';
+    while (1) {
+        printf("\n=== OPCIJE ===\n");
+        printf("1. Povratak na glavni meni\n");
+        printf("Unesite opciju: ");
         
-        if (strcmp(choice, "1") == 0) {
-            printf("Povratak na glavni meni...\n\n");
-        } else if (strcmp(choice, "2") == 0) {
-            printf("Pokretanje nove pretrage...\n\n");
+        if (fgets(choice, sizeof(choice), stdin)) {
+            choice[strcspn(choice, "\n")] = '\0';
+            
+            if (strcmp(choice, "1") == 0) {
+                printf("Povratak na glavni meni...\n\n");
+                return 1;
+            } else {
+                printf("Nepoznata opcija. Molimo pokušajte ponovo.\n");
+                // Loop continues, asking for input again
+            }
         } else {
-            printf("Nepoznata opcija. Povratak na glavni meni...\n\n");
+            printf("Greška pri čitanju unosa. Molimo pokušajte ponovo.\n");
+            // Loop continues, asking for input again
         }
     }
 }
@@ -113,7 +117,7 @@ int handle_authentication_menu(int sock, User *user, char *message, char *server
     int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
     if (read_size > 0) {
         server_response[read_size] = '\0';
-        return process_server_response(server_response, user, NULL);
+        return process_server_response(server_response, user, NULL, sock);
     }
     
     return 0;
@@ -252,28 +256,21 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
     }
     printf("\nKomanda je uspešno poslata serveru.\n\n");
     
-    return 1; // Continue to receive response
+    // Receive response from server
+    int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
+    if (read_size > 0) {
+        server_response[read_size] = '\0';
+        return process_server_response(server_response, user, NULL, sock);
+    }
+    
+    return 1;
 }
 
-int process_server_response(char *server_response, User *user, int *authenticated)
+int process_server_response(char *server_response, User *user, int *authenticated, int sock)
 {
     #ifdef DEBUG
         printf("Primljena poruka od servera:\n%s\n\n", server_response);
     #endif
-    
-    // Handle vehicle data response
-    if (strncmp(server_response, "# TABELA", 8) == 0) {
-        Vehicle vehicles[100]; // Maximum 100 vehicles
-        int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
-        
-        if (vehicle_count > 0) {
-            display_vehicles_table(vehicles, vehicle_count);
-            handle_vehicle_display_navigation();
-        } else {
-            printf("Nema vozila za prikaz.\n\n");
-        }
-        return 1; // Stay in main menu
-    }
     
     // Handle login errors
     if (strcmp(server_response, "# LOGIN ERROR 101 #") == 0) {
@@ -320,6 +317,31 @@ int process_server_response(char *server_response, User *user, int *authenticate
      // Handle search responses
     if (strcmp(server_response, "# SEARCH SUCCES #") == 0) {
         printf("Pretraga je uspešna! Čekanje podataka o vozilima...\n\n");
+        
+        // Immediately wait for TABELA response
+        int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
+        if (read_size > 0) {
+            server_response[read_size] = '\0';
+            
+            #ifdef DEBUG
+                printf("Primljena TABELA poruka:\n%s\n\n", server_response);
+            #endif
+            
+            // Handle vehicle data response
+            if (strncmp(server_response, "# TABELA", 8) == 0) {
+                Vehicle vehicles[100]; // Maximum 100 vehicles
+                int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
+                
+                if (vehicle_count > 0) {
+                    display_vehicles_table(vehicles, vehicle_count);
+                    return handle_vehicle_display_navigation();
+                } else {
+                    printf("Nema vozila za prikaz.\n\n");
+                }
+            } else {
+                printf("Neočekivani odgovor nakon pretrage:\n%s\n\n", server_response);
+            }
+        }
         return 1; // Stay in main menu
     }
     
