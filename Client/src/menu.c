@@ -113,3 +113,29 @@ void display_registration_form(User* user)
     
     puts("\nPodaci su uspešno uneti!");
 }
+
+// Function to display vehicle data in table format
+void display_vehicles_table(Vehicle *vehicles, int count) {
+    printf("\n=== REZULTATI PRETRAGE ===\n");
+    printf("Pronađeno je %d vozila:\n\n", count);
+    
+    // Print table header
+    printf("┌─────────┬─────────────┬─────────────┬──────────┬──────────┬──────────┬──────────┐\n");
+    printf("│ %-7s │ %-11s │ %-11s │ %-8s │ %-8s │ %-8s │ %-8s │\n", 
+           "ID", "Proizvođač", "Model", "Godina", "Boja", "Tablica", "Status");
+    printf("├─────────┼─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\n");
+    
+    // Print vehicle data
+    for (int i = 0; i < count; i++) {
+        printf("│ %-7d │ %-11s │ %-11s │ %-8d │ %-8s │ %-8s │ %-8s │\n",
+               vehicles[i].id,
+               vehicles[i].manufacturer,
+               vehicles[i].model,
+               vehicles[i].year,
+               vehicles[i].color,
+               vehicles[i].license_plate,
+               vehicles[i].status);
+    }
+    
+    printf("└─────────┴─────────────┴─────────────┴──────────┴──────────┴──────────┴──────────┘\n");
+}

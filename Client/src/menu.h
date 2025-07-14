@@ -37,6 +37,7 @@ void display_menu(const User* user);
 void display_auth_menu();
 void display_login_form();
 void display_registration_form(User* user);
+void display_vehicles_table(Vehicle *vehicles, int count);
 
 int create_socket_connection(void);
 int handle_authentication_menu(int sock, User *user, char *message, char *server_response);

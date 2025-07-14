@@ -89,3 +89,124 @@ void parse_registration_success(char *message, User *user)
         }
     }
 }
+
+// Function to parse vehicle data from server response
+int parse_vehicle_data(char *response, Vehicle *vehicles, int max_vehicles) {
+    int vehicle_count = 0;
+    char *ptr = response;
+    char *start, *end;
+    
+    // Find the start of TABELA
+    if (strncmp(ptr, "# TABELA", 8) != 0) {
+        return 0;
+    }
+    
+    // Skip to the first vehicle data
+    ptr = strchr(ptr, '{');
+    
+    while (ptr != NULL && vehicle_count < max_vehicles) {
+        ptr++; // Skip '{'
+        
+        // Parse ID
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                vehicles[vehicle_count].id = atoi(start);
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse manufacturer
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(vehicles[vehicle_count].manufacturer, start, sizeof(vehicles[vehicle_count].manufacturer) - 1);
+                vehicles[vehicle_count].manufacturer[sizeof(vehicles[vehicle_count].manufacturer) - 1] = '\0';
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse model
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(vehicles[vehicle_count].model, start, sizeof(vehicles[vehicle_count].model) - 1);
+                vehicles[vehicle_count].model[sizeof(vehicles[vehicle_count].model) - 1] = '\0';
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse year
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                vehicles[vehicle_count].year = atoi(start);
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse color
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(vehicles[vehicle_count].color, start, sizeof(vehicles[vehicle_count].color) - 1);
+                vehicles[vehicle_count].color[sizeof(vehicles[vehicle_count].color) - 1] = '\0';
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse license plate
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(vehicles[vehicle_count].license_plate, start, sizeof(vehicles[vehicle_count].license_plate) - 1);
+                vehicles[vehicle_count].license_plate[sizeof(vehicles[vehicle_count].license_plate) - 1] = '\0';
+                ptr = end + 1;
+            }
+        }
+        
+        // Skip space and parse status
+        while (*ptr == ' ') ptr++;
+        if (*ptr == '[') {
+            ptr++;
+            start = ptr;
+            end = strchr(ptr, ']');
+            if (end) {
+                *end = '\0';
+                strncpy(vehicles[vehicle_count].status, start, sizeof(vehicles[vehicle_count].status) - 1);
+                vehicles[vehicle_count].status[sizeof(vehicles[vehicle_count].status) - 1] = '\0';
+                ptr = end + 1;
+            }
+        }
+        
+        vehicle_count++;
+        
+        // Find next vehicle or end
+        ptr = strchr(ptr, '{');
+    }
+    
+    return vehicle_count;
+}

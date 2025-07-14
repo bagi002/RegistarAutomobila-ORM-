@@ -1,6 +1,29 @@
 #include "menu.h"
 #include "parser.h"
 
+
+// Function to handle user navigation after displaying vehicles
+void handle_vehicle_display_navigation() {
+    char choice[10];
+    
+    printf("\n=== OPCIJE ===\n");
+    printf("1. Povratak na glavni meni\n");
+    printf("2. Nova pretraga\n");
+    printf("Unesite opciju (1-2): ");
+    
+    if (fgets(choice, sizeof(choice), stdin)) {
+        choice[strcspn(choice, "\n")] = '\0';
+        
+        if (strcmp(choice, "1") == 0) {
+            printf("Povratak na glavni meni...\n\n");
+        } else if (strcmp(choice, "2") == 0) {
+            printf("Pokretanje nove pretrage...\n\n");
+        } else {
+            printf("Nepoznata opcija. Povratak na glavni meni...\n\n");
+        }
+    }
+}
+
 int create_socket_connection(void)
 {
     int sock;
@@ -119,6 +142,7 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
                 char search_model[20] = "null";
                 char search_year[20] = "null";
                 char input[256];
+                char temp_message[200];
                 
                 printf("\n=== PRETRAGA VOZILA ===\n");
                 printf("Ostavite prazno za parametre koje ne želite da koristite\n\n");
@@ -159,8 +183,43 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
                     }
                 }
                 
-                snprintf(message, DEFAULT_BUFLEN, "# SEARCH [%s] [%s] [%s] [%s] #", 
-                         search_id, search_manufacturer, search_model, search_year);
+                // Format each parameter with brackets if not null
+                strcpy(temp_message, "# SEARCH ");
+                
+                if (strcmp(search_id, "null") == 0) {
+                    strcat(temp_message, "null ");
+                } else {
+                    strcat(temp_message, "[");
+                    strcat(temp_message, search_id);
+                    strcat(temp_message, "] ");
+                }
+                
+                if (strcmp(search_manufacturer, "null") == 0) {
+                    strcat(temp_message, "null ");
+                } else {
+                    strcat(temp_message, "[");
+                    strcat(temp_message, search_manufacturer);
+                    strcat(temp_message, "] ");
+                }
+                
+                if (strcmp(search_model, "null") == 0) {
+                    strcat(temp_message, "null ");
+                } else {
+                    strcat(temp_message, "[");
+                    strcat(temp_message, search_model);
+                    strcat(temp_message, "] ");
+                }
+                
+                if (strcmp(search_year, "null") == 0) {
+                    strcat(temp_message, "null");
+                } else {
+                    strcat(temp_message, "[");
+                    strcat(temp_message, search_year);
+                    strcat(temp_message, "]");
+                }
+                
+                strcat(temp_message, " #");
+                strcpy(message, temp_message);
                 
                 printf("\nPretragа je pokrenuta...\n");
             }
@@ -201,6 +260,20 @@ int process_server_response(char *server_response, User *user, int *authenticate
     #ifdef DEBUG
         printf("Primljena poruka od servera:\n%s\n\n", server_response);
     #endif
+    
+    // Handle vehicle data response
+    if (strncmp(server_response, "# TABELA", 8) == 0) {
+        Vehicle vehicles[100]; // Maximum 100 vehicles
+        int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
+        
+        if (vehicle_count > 0) {
+            display_vehicles_table(vehicles, vehicle_count);
+            handle_vehicle_display_navigation();
+        } else {
+            printf("Nema vozila za prikaz.\n\n");
+        }
+        return 1; // Stay in main menu
+    }
     
     // Handle login errors
     if (strcmp(server_response, "# LOGIN ERROR 101 #") == 0) {
