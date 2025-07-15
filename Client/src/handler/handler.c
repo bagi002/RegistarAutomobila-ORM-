@@ -1,61 +1,10 @@
-#include "menu.h"
-#include "parser.h"
+#include "../menu/menu.h"
+#include "../parser/parser.h"
+#include "../network/network.h"
 
+// Uncomment the line below to enable debug output
+#define DEBUG
 
-// Function to handle user navigation after displaying vehicles
-int handle_vehicle_display_navigation() {
-    char choice[10];
-    
-    while (1) {
-        printf("\n=== OPCIJE ===\n");
-        printf("1. Povratak na glavni meni\n");
-        printf("Unesite opciju: ");
-        
-        if (fgets(choice, sizeof(choice), stdin)) {
-            choice[strcspn(choice, "\n")] = '\0';
-            
-            if (strcmp(choice, "1") == 0) {
-                printf("Povratak na glavni meni...\n\n");
-                return 1;
-            } else {
-                printf("Nepoznata opcija. Molimo pokušajte ponovo.\n");
-                // Loop continues, asking for input again
-            }
-        } else {
-            printf("Greška pri čitanju unosa. Molimo pokušajte ponovo.\n");
-            // Loop continues, asking for input again
-        }
-    }
-}
-
-int create_socket_connection(void)
-{
-    int sock;
-    struct sockaddr_in server;
-    
-    // Create socket
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == -1) {
-        printf("Could not create socket\n");
-        return -1;
-    }
-    puts("Socket created");
-    
-    // Setup server address
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
-    server.sin_family = AF_INET;
-    server.sin_port = htons(DEFAULT_PORT);
-    
-    // Connect to server
-    if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-        perror("connect failed. Error");
-        close(sock);
-        return -1;
-    }
-    
-    puts("Connected\n");
-    return sock;
-}
 
 int handle_authentication_menu(int sock, User *user, char *message, char *server_response)
 {
@@ -238,7 +187,6 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
                 if (fgets(car_id_input, sizeof(car_id_input), stdin)) {
                     car_id_input[strcspn(car_id_input, "\n")] = '\0';
                     int car_id = atoi(car_id_input);
-                    vehicle->id = car_id;
                     if (car_id > 0) {
                         snprintf(message, DEFAULT_BUFLEN, "# RESERVE [%d] [%d] #", user->id, car_id);
                         printf("\nZahtev za rezervaciju je poslat...\n");
@@ -253,7 +201,8 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
             }
             break;
         case 4: // CheckStatus
-            snprintf(message, DEFAULT_BUFLEN, "Reserve");
+            snprintf(message, DEFAULT_BUFLEN, "# CHECKSTATUS [%d] #", user->id);
+            printf("\nProvera statusa rezervacije...\n");
             break;
         case 5: // Exit
             printf("Zatvaranje aplikacije...\n");
@@ -389,6 +338,14 @@ int process_server_response(char *server_response, User *user, int *authenticate
         printf("GREŠKA: Pretraga nije uspešna!\n\n");
         return 1; // Stay in main menu
     }
+    
+    // Handle checkstatus responses
+    // Handle search responses
+    if (strcmp(server_response, "# CHECKSTATUS SUCCES") == 0) {
+        printf("Pretraga je uspešna! Čekanje podataka o vozilima...\n\n");
+        return 1;
+    }
+    
     // Handle reserve responses
     if (strcmp(server_response, "# RESERVE SUCCES #") == 0) {
         printf("USPEH: Vozilo je uspešno rezervisano!\n\n");

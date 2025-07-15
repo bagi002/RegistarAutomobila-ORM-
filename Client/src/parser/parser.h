@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "menu.h"
+#include "../menu/menu.h"
 
 // Function prototypes for parsing server responses
 void parse_login_success(char *message, User *user);

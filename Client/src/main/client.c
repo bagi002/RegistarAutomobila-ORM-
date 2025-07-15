@@ -1,10 +1,6 @@
-#include "menu.h"
-
-
-// Uncomment the line below to enable debug output
-#define DEBUG
-
-// Function prototypes
+#include "../menu/menu.h"
+#include "../network/network.h"
+#include "../handler/handler.h"
 
 
 int main(int argc, char *argv[])
