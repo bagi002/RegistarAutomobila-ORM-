@@ -38,5 +38,6 @@ void display_auth_menu();
 void display_login_form();
 void display_registration_form(User* user);
 void display_vehicles_table(Vehicle *vehicles, int count);
+void display_reserved_vehicles_table(Vehicle *vehicles, int count, int user_id);
 
 #endif // MENU_H

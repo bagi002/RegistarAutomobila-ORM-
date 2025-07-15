@@ -139,32 +139,6 @@ void display_vehicles_table(Vehicle *vehicles, int count) {
     printf("└─────────┴─────────────┴─────────────┴──────────┴──────────┴──────────┴──────────┘\n");
 }
 
-// Function to handle user navigation after displaying vehicles
-int handle_vehicle_display_navigation() {
-    char choice[10];
-    
-    while (1) {
-        printf("\n=== OPCIJE ===\n");
-        printf("1. Povratak na glavni meni\n");
-        printf("Unesite opciju: ");
-        
-        if (fgets(choice, sizeof(choice), stdin)) {
-            choice[strcspn(choice, "\n")] = '\0';
-            
-            if (strcmp(choice, "1") == 0) {
-                printf("Povratak na glavni meni...\n\n");
-                return 1;
-            } else {
-                printf("Nepoznata opcija. Molimo pokušajte ponovo.\n");
-                // Loop continues, asking for input again
-            }
-        } else {
-            printf("Greška pri čitanju unosa. Molimo pokušajte ponovo.\n");
-            // Loop continues, asking for input again
-        }
-    }
-}
-
 // Function to display reserved vehicles for a specific user
 void display_reserved_vehicles_table(Vehicle *vehicles, int count, int user_id) {
     printf("\n=== REZERVISANA VOZILA ===\n");
