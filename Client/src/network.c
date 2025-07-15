@@ -260,7 +260,7 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
             return -1;
         default:
             printf("Nepoznata opcija. Molimo vas da unesete broj između 1 i 6.\n");
-            return 0;
+            return 1;
     }
     
     #ifdef DEBUG
@@ -332,32 +332,54 @@ int process_server_response(char *server_response, User *user, int *authenticate
         parse_registration_success(server_response, user);
         return 1;
     }
+
+    //#####################################################//
+
      // Handle search responses
-    if (strcmp(server_response, "# SEARCH SUCCES #") == 0) {
+    if (strncmp(server_response, "# SEARCH SUCCES", 15) == 0) {
         printf("Pretraga je uspešna! Čekanje podataka o vozilima...\n\n");
         
-        // Immediately wait for TABELA response
-        int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
-        if (read_size > 0) {
-            server_response[read_size] = '\0';
-            
+        // Check if TABELA data is already in the same message
+        char *tabela_pos = strstr(server_response, "# TABELA");
+        if (tabela_pos != NULL) {
+            // TABELA data is in the same message, parse it directly
             #ifdef DEBUG
-                printf("Primljena TABELA poruka:\n%s\n\n", server_response);
+                printf("TABELA podaci pronađeni u istoj poruci:\n%s\n\n", tabela_pos);
             #endif
             
-            // Handle vehicle data response
-            if (strncmp(server_response, "# TABELA", 8) == 0) {
-                Vehicle vehicles[100]; // Maximum 100 vehicles
-                int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
-                
-                if (vehicle_count > 0) {
-                    display_vehicles_table(vehicles, vehicle_count);
-                    return handle_vehicle_display_navigation();
-                } else {
-                    printf("Nema vozila za prikaz.\n\n");
-                }
+            Vehicle vehicles[100]; // Maximum 100 vehicles
+            int vehicle_count = parse_vehicle_data(tabela_pos, vehicles, 100);
+            
+            if (vehicle_count > 0) {
+                display_vehicles_table(vehicles, vehicle_count);
+                return handle_vehicle_display_navigation();
             } else {
-                printf("Neočekivani odgovor nakon pretrage:\n%s\n\n", server_response);
+                printf("Nema vozila za prikaz.\n\n");
+            }
+        } else {
+            // TABELA data is in a separate message, wait for it
+            int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
+            if (read_size > 0) {
+                server_response[read_size] = '\0';
+                
+                #ifdef DEBUG
+                    printf("Primljena TABELA poruka:\n%s\n\n", server_response);
+                #endif
+                
+                // Handle vehicle data response
+                if (strncmp(server_response, "# TABELA", 8) == 0) {
+                    Vehicle vehicles[100]; // Maximum 100 vehicles
+                    int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
+                    
+                    if (vehicle_count > 0) {
+                        display_vehicles_table(vehicles, vehicle_count);
+                        return handle_vehicle_display_navigation();
+                    } else {
+                        printf("Nema vozila za prikaz.\n\n");
+                    }
+                } else {
+                    printf("Neočekivani odgovor nakon pretrage:\n%s\n\n", server_response);
+                }
             }
         }
         return 1; // Stay in main menu
@@ -397,6 +419,9 @@ void cleanup_user_data(User *user)
 {
     memset(user->first_name, 0, sizeof(user->first_name));
     memset(user->last_name, 0, sizeof(user->last_name));
+    memset(user->name, 0, sizeof(user->name));
+    memset(user->password, 0, sizeof(user->password));
+    
     user->id = 0;
 }
 
