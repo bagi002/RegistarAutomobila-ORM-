@@ -123,7 +123,7 @@ int handle_authentication_menu(int sock, User *user, char *message, char *server
     return 0;
 }
 
-int handle_main_menu(int sock, User *user, char *message, char *server_response)
+int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char *server_response)
 {
     display_menu(user);
     
@@ -225,16 +225,34 @@ int handle_main_menu(int sock, User *user, char *message, char *server_response)
                 strcat(temp_message, " #");
                 strcpy(message, temp_message);
                 
+                printf("DEBUG: Formatirana poruka za pretragu: %s\n", message);
                 printf("\nPretragа je pokrenuta...\n");
             }
             break;
-        case 3: // SearchAll
-            snprintf(message, DEFAULT_BUFLEN, "SearchAll");
+        case 3: // Reserve car
+            {
+                char car_id_input[20];
+                printf("\n=== REZERVACIJA VOZILA ===\n");
+                printf("Unesite ID vozila koje želite da rezervišete: ");
+                
+                if (fgets(car_id_input, sizeof(car_id_input), stdin)) {
+                    car_id_input[strcspn(car_id_input, "\n")] = '\0';
+                    int car_id = atoi(car_id_input);
+                    vehicle->id = car_id;
+                    if (car_id > 0) {
+                        snprintf(message, DEFAULT_BUFLEN, "# RESERVE [%d] [%d] #", user->id, car_id);
+                        printf("\nZahtev za rezervaciju je poslat...\n");
+                    } else {
+                        printf("Neispravno unet ID vozila.\n");
+                        return 0;
+                    }
+                } else {
+                    printf("Greška pri čitanju ID-a vozila.\n");
+                    return 0;
+                }
+            }
             break;
-        case 4: // CheckStatus
-            snprintf(message, DEFAULT_BUFLEN, "CheckStatus");
-            break;
-        case 5: // Reserve
+        case 4: // Reserve
             snprintf(message, DEFAULT_BUFLEN, "Reserve");
             break;
         case 6: // Exit
@@ -349,6 +367,27 @@ int process_server_response(char *server_response, User *user, int *authenticate
         printf("GREŠKA: Pretraga nije uspešna!\n\n");
         return 1; // Stay in main menu
     }
+    // Handle reserve responses
+    if (strcmp(server_response, "# RESERVE SUCCES #") == 0) {
+        printf("USPEH: Vozilo je uspešno rezervisano!\n\n");
+        return 1; // Stay in main menu
+    }
+    
+    if (strcmp(server_response, "# RESERVE ERROR 301 #") == 0) {
+        printf("GREŠKA: Vozilo ne postoji!\n\n");
+        return 1; // Stay in main menu
+    }
+    
+    if (strcmp(server_response, "# RESERVE ERROR 302 #") == 0) {
+        printf("GREŠKA: Vozilo je već zauzeto!\n\n");
+        return 1; // Stay in main menu
+    }
+    
+    if (strcmp(server_response, "# RESERVE ERROR 303 #") == 0) {
+        printf("GREŠKA: Već ste rezervisali vozilo!\n\n");
+        return 1; // Stay in main menu
+    }
+    
     // Handle other server responses
     printf("Odgovor servera:\n%s\n\n", server_response);
     return 1; // Stay in current menu

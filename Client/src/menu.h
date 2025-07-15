@@ -41,7 +41,7 @@ void display_vehicles_table(Vehicle *vehicles, int count);
 
 int create_socket_connection(void);
 int handle_authentication_menu(int sock, User *user, char *message, char *server_response);
-int handle_main_menu(int sock, User *user, char *message, char *server_response);
+int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char *server_response);
 int process_server_response(char *server_response, User *user, int *authenticated, int sock);
 void cleanup_user_data(User *user);
 
