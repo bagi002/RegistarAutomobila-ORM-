@@ -38,11 +38,5 @@ void display_auth_menu();
 void display_login_form();
 void display_registration_form(User* user);
 void display_vehicles_table(Vehicle *vehicles, int count);
-int handle_vehicle_display_navigation();
-
-int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char *server_response);
-int process_server_response(char *server_response, User *user, int *authenticated, int sock);
-int handle_vehicle_display_navigation();
-void cleanup_user_data(User *user);
 
 #endif // MENU_H

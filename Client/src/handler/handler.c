@@ -66,13 +66,13 @@ int handle_authentication_menu(int sock, User *user, char *message, char *server
     int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
     if (read_size > 0) {
         server_response[read_size] = '\0';
-        return process_server_response(server_response, user, NULL, sock);
+        return process_server_response(server_response, user, sock);
     }
     
     return 0;
 }
 
-int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char *server_response)
+int handle_main_menu(int sock, User *user, char *message, char *server_response)
 {
     display_menu(user);
     
@@ -94,8 +94,8 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
                 char search_manufacturer[20] = "null";
                 char search_model[20] = "null";
                 char search_year[20] = "null";
-                char input[256];
-                char temp_message[200];
+                char input[20];
+                char temp_message[50];
                 
                 printf("\n=== PRETRAGA VOZILA ===\n");
                 printf("Ostavite prazno za parametre koje ne želite da koristite\n\n");
@@ -180,7 +180,7 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
             break;
         case 3: // Reserve car
             {
-                char car_id_input[20];
+                char car_id_input[5];
                 printf("\n=== REZERVACIJA VOZILA ===\n");
                 printf("Unesite ID vozila koje želite da rezervišete: ");
                 
@@ -227,13 +227,13 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
     int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
     if (read_size > 0) {
         server_response[read_size] = '\0';
-        return process_server_response(server_response, user, NULL, sock);
+        return process_server_response(server_response, user, sock);
     }
     
     return 1;
 }
 
-int process_server_response(char *server_response, User *user, int *authenticated, int sock)
+int process_server_response(char *server_response, User *user, int sock)
 {
     #ifdef DEBUG
         printf("Primljena poruka od servera:\n%s\n\n", server_response);
@@ -296,8 +296,8 @@ int process_server_response(char *server_response, User *user, int *authenticate
                 printf("TABELA podaci pronađeni u istoj poruci:\n%s\n\n", tabela_pos);
             #endif
             
-            Vehicle vehicles[100]; // Maximum 100 vehicles
-            int vehicle_count = parse_vehicle_data(tabela_pos, vehicles, 100);
+            Vehicle vehicles[30]; // Maximum 30 vehicles
+            int vehicle_count = parse_vehicle_data(tabela_pos, vehicles, 30);
             
             if (vehicle_count > 0) {
                 display_vehicles_table(vehicles, vehicle_count);
@@ -317,8 +317,8 @@ int process_server_response(char *server_response, User *user, int *authenticate
                 
                 // Handle vehicle data response
                 if (strncmp(server_response, "# TABELA", 8) == 0) {
-                    Vehicle vehicles[100]; // Maximum 100 vehicles
-                    int vehicle_count = parse_vehicle_data(server_response, vehicles, 100);
+                    Vehicle vehicles[30]; // Maximum 30 vehicles
+                    int vehicle_count = parse_vehicle_data(server_response, vehicles, 30);
                     
                     if (vehicle_count > 0) {
                         display_vehicles_table(vehicles, vehicle_count);
@@ -340,10 +340,58 @@ int process_server_response(char *server_response, User *user, int *authenticate
     }
     
     // Handle checkstatus responses
-    // Handle search responses
-    if (strcmp(server_response, "# CHECKSTATUS SUCCES") == 0) {
-        printf("Pretraga je uspešna! Čekanje podataka o vozilima...\n\n");
-        return 1;
+    if (strncmp(server_response, "# CHECKSTATUS SUCCES", 20) == 0) {
+        printf("Pretraga rezervisanih vozila je uspešna! Čekanje podataka...\n\n");
+        
+        // Check if TABELA data is already in the same message
+        char *tabela_pos = strstr(server_response, "# TABELA");
+        if (tabela_pos != NULL) {
+            // TABELA data is in the same message, parse it directly
+            #ifdef DEBUG
+                printf("TABELA podaci pronađeni u istoj poruci:\n%s\n\n", tabela_pos);
+            #endif
+            
+            Vehicle vehicles[30]; // Maximum 30 vehicles
+            int vehicle_count = parse_vehicle_data(tabela_pos, vehicles, 30);
+            
+            if (vehicle_count > 0) {
+                display_reserved_vehicles_table(vehicles, vehicle_count, user->id);
+                return handle_vehicle_display_navigation();
+            } else {
+                printf("Trenutno nemate rezervisana vozila.\n\n");
+            }
+        } else {
+            // TABELA data is in a separate message, wait for it
+            int read_size = recv(sock, server_response, DEFAULT_BUFLEN - 1, 0);
+            if (read_size > 0) {
+                server_response[read_size] = '\0';
+                
+                #ifdef DEBUG
+                    printf("Primljena TABELA poruka:\n%s\n\n", server_response);
+                #endif
+                
+                // Handle reserved vehicle data response
+                if (strncmp(server_response, "# TABELA", 8) == 0) {
+                    Vehicle vehicles[30]; // Maximum 30 vehicles
+                    int vehicle_count = parse_vehicle_data(server_response, vehicles, 30);
+                    
+                    if (vehicle_count > 0) {
+                        display_reserved_vehicles_table(vehicles, vehicle_count, user->id);
+                        return handle_vehicle_display_navigation();
+                    } else {
+                        printf("Trenutno nemate rezervisana vozila.\n\n");
+                    }
+                } else {
+                    printf("Neočekivani odgovor nakon pretrage rezervacija:\n%s\n\n", server_response);
+                }
+            }
+        }
+        return 1; // Stay in main menu
+    }
+    
+    if (strcmp(server_response, "# CHECKSTATUS ERROR #") == 0) {
+        printf("GREŠKA: Pretraga rezervisanih vozila nije uspešna!\n\n");
+        return 1; // Stay in main menu
     }
     
     // Handle reserve responses

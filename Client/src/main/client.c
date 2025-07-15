@@ -8,7 +8,6 @@ int main(int argc, char *argv[])
     int sock;
 
     User user;
-    Vehicle vehicle;
     int authenticated = 0;
     
     // Initialize user structure
@@ -44,7 +43,7 @@ int main(int argc, char *argv[])
                 continue;
             }
         } else {
-            result = handle_main_menu(sock, &user, &vehicle, message, server_response);
+            result = handle_main_menu(sock, &user, message, server_response);
             if (result == -1) break; // Exit application
             if (result == 0) {
                 authenticated = 0;

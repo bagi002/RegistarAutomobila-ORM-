@@ -164,3 +164,30 @@ int handle_vehicle_display_navigation() {
         }
     }
 }
+
+// Function to display reserved vehicles for a specific user
+void display_reserved_vehicles_table(Vehicle *vehicles, int count, int user_id) {
+    printf("\n=== REZERVISANA VOZILA ===\n");
+    printf("Korisnik ID: %d\n", user_id);
+    printf("Pronađeno je %d rezervisanih vozila:\n\n", count);
+    
+    // Print table header
+    printf("┌─────────┬─────────────┬─────────────┬──────────┬──────────┬──────────┬──────────┐\n");
+    printf("│%-7s  │ %-11s  │ %-11s │ %-8s │ %-8s │ %-8s │ %-8s │\n", 
+           "ID", "Proizvođač", "Model", "Godina", "Boja", "Tablica", "Status");
+    printf("├─────────┼─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\n");
+    
+    // Print vehicle data
+    for (int i = 0; i < count; i++) {
+        printf("│ %-7d │ %-11s │ %-11s │ %-8d │ %-8s │ %-8s │ %-8s │\n",
+               vehicles[i].id,
+               vehicles[i].manufacturer,
+               vehicles[i].model,
+               vehicles[i].year,
+               vehicles[i].color,
+               vehicles[i].license_plate,
+               vehicles[i].status);
+    }
+    
+    printf("└─────────┴─────────────┴─────────────┴──────────┴──────────┴──────────┴──────────┘\n");
+}
