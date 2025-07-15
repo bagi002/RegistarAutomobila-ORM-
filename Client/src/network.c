@@ -302,13 +302,13 @@ int process_server_response(char *server_response, User *user, int *authenticate
     }
     
     // Handle registration errors
-    if (strcmp(server_response, "# REGISTRATION 201 #") == 0) {
+    if (strcmp(server_response, "# REGISTRATION ERROR 201 #") == 0) {
         printf("GRESKA: Korisnik vec postoji!\n\n");
         memset(user, 0, sizeof(User));
         return 0;
     }
     
-    if (strcmp(server_response, "# REGISTRATION 202 #") == 0) {
+    if (strcmp(server_response, "# REGISTRATION ERROR 202 #") == 0) {
         printf("GRESKA: Korisnicko ime je zauzeto!\n\n");
         memset(user, 0, sizeof(User));
         return 0;
