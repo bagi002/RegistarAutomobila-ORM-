@@ -22,13 +22,12 @@ void display_menu(const User* user)
     puts("║  │                                                                     │     ║");
     puts("║  │  [2] ➤ Pretraga dostupnih automobila u elektronskom registru        │     ║");
     puts("║  │                                                                     │     ║");
-    puts("║  │  [3] ➤ Pretraga svih automobila u elektronskom registru             │     ║");
+    puts("║  │  [3] ➤ Rezervacija automobila po ID-u automobila                    │     ║");
     puts("║  │                                                                     │     ║");
     puts("║  │  [4] ➤ Provera rezervisanih automobila prijavljenog korisnika       │     ║");
     puts("║  │                                                                     │     ║");
-    puts("║  │  [5] ➤ Rezervacija automobila po ID-u automobila                    │     ║");
+    puts("║  │  [5] ➤ Izlaz iz aplikacije                                          │     ║");
     puts("║  │                                                                     │     ║");
-    puts("║  │  [6] ➤ Izlaz iz aplikacije                                          │     ║");
     puts("║  │                                                                     │     ║");
     puts("║  └─────────────────────────────────────────────────────────────────────┘     ║");
     puts("║                                                                              ║");

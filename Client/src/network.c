@@ -252,10 +252,10 @@ int handle_main_menu(int sock, User *user, Vehicle *vehicle, char *message, char
                 }
             }
             break;
-        case 4: // Reserve
+        case 4: // CheckStatus
             snprintf(message, DEFAULT_BUFLEN, "Reserve");
             break;
-        case 6: // Exit
+        case 5: // Exit
             printf("Zatvaranje aplikacije...\n");
             return -1;
         default:
