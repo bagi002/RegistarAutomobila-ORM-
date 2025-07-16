@@ -58,6 +58,7 @@ void *connection_handler(void *param)
             // Invalid command format
             char error_response[DEFAULT_BUFLEN];
             strcpy(error_response, "# ERROR 401 #");
+
             if(send_message(sock, error_response) < 0) {
                 printf("Thread %d: Send failed\n", thread_index);
                 break;
