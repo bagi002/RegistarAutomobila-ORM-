@@ -95,6 +95,7 @@ Sintaksa komande # KOMANDA ATRBUTI #
     kodovi greske:
         101 - Pogresna lozinka
         102 - Nepostojeci korisnik (lose korisnicko ime)
+        103 - Prosledeni parametri nisu dobri
 
 -- Registration
     od klijenta:
@@ -105,6 +106,7 @@ Sintaksa komande # KOMANDA ATRBUTI #
             -kodovi greske:
                 201 - korisnik vec postoji
                 202 - zauzeto korisnicko ime 
+                203 - prosledjeni parametri nisu dobri nedostaju
 
 -- Logout
     od klijenta:
@@ -147,4 +149,12 @@ Sintaksa komande # KOMANDA ATRBUTI #
                 301 - Vozilo ne postoji
                 302 - Vozilo je zauzeto
                 303 - Vec ste rezervisali vozilo
+                304 - Los skup parametara
+
+-- FATAL ERROR
+    obostrano:
+        # ERROR codeErr #
+    
+    Kodovi greske:
+        401 - Los format primljene komande nije moguce citanje iste
                 
